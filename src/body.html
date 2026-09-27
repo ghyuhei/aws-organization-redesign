@@ -1,7 +1,7 @@
 <header class="hero">
   <h1>AWS Organization 再設計ガイド</h1>
   <p>新しい組織の OU・ポリシー設計と、既存のアカウントを止めずに移す手順</p>
-  <p class="meta">2026-09-27 時点の情報。[n] は AWS の公式ドキュメント（ユーザーガイド、API リファレンス、FAQ、What's New）、[Bn] は AWS のブログと re:Post。[Bn] だけを根拠にした記述は、公式ドキュメントでの明示を確認できていない。{{U}} はどちらにも明示がない事項で、パイロットで確認する。</p>
+  <p class="meta">2026-09-28 時点の情報。出典の [n] は AWS の公式ドキュメント、[Bn] は AWS のブログと re:Post（公式ドキュメントでは明示を確認できていない記述の出典）。{{U}} はどちらにも明示がなく、パイロットで確認する事項。</p>
 </header>
 
 <nav class="toc" aria-label="目次">
@@ -23,11 +23,11 @@
 <!-- 1 -->
 <h2 id="summary">1. 要点</h2>
 <ol class="steps">
-  <li><b>新しい組織が必要かを最初に判断する。</b>必要なのは管理アカウント（支払元）を変える場合だけで、既存組織の管理アカウントは変更できない{{r:63}}。それ以外は既存組織の中で作り直す（方式 0）。組織を移さないので、Identity Center の URL も RAM の共有も変わらない。</li>
+  <li><b>新しい組織が要るかを最初に判断する。</b>既存組織の管理アカウント（支払元）は変更できない{{r:63}}。新しい組織が要るのはこれを変える場合だけで、それ以外は既存組織の中で作り直す（方式 0）。組織を移さなければ、Identity Center の URL も RAM の共有も変わらない。</li>
   <li><b>OU は AWS ホワイトペーパーの推奨に沿って作り、Control Tower（ランディングゾーン 4.0）で統制する。</b>業務を止めうる統制は、<a href="#g-check">4.6</a> の確認を済ませたアカウントにだけ効かせる。</li>
-  <li><b>新組織へは「アカウントの直接移行」で移す</b>{{r:36}}。移したアカウントは Root 直下に入り、その時点で新組織のポリシーが効く{{r:35,2}}。そのため Root には、移ってきたアカウントの動作を変えないポリシーだけを付ける。旧組織の Control Tower に登録しているアカウントは、移す前に登録を外す必要がある{{r:ctxfer}}。</li>
-  <li><b>システムが止まる原因は 3 つに分かれる。</b>共有が外れる（Resolver ルール、VPC 共有など）、権限の条件が合わなくなる（組織 ID など）、組織の自動化が設定を変える（StackSets、Firewall Manager、Control Tower など）。<a href="#change">7 章</a>の方法で全件を洗い出し、移行の前に打ち消す。</li>
-  <li><b>RAM で共有している TGW・Resolver ルールなどは、組織が変わっても外れない「ブリッジ共有」を先に作って移る。</b>2026-02 に提供が始まった設定を使う{{r:39,40}}。VPC 共有は組織内でしか使えないので{{r:41}}、移行前に依存をなくす。</li>
+  <li><b>新組織へは「アカウントの直接移行」で移す</b>{{r:36}}。移したアカウントは Root 直下に入り、その時点で新組織のポリシーが効く{{r:35,2}}。そのため Root には、アカウントの動作を変えないポリシーだけを付ける。旧組織の Control Tower に登録したアカウントは、移す前に登録を外す{{r:ctxfer}}。</li>
+  <li><b>システムが止まる原因は 3 つある。</b>共有が外れる（Resolver ルール、VPC 共有など）。権限の条件が合わなくなる（組織 ID など）。組織の自動化が設定を変える（StackSets、Firewall Manager、Control Tower など）。<a href="#change">7 章</a>の方法で全件を洗い出し、移行の前に打ち消す。</li>
+  <li><b>TGW や Resolver ルールなどの RAM の共有は、組織が変わっても外れない「ブリッジ共有」を移行前に作って保つ。</b>2026-02 に提供が始まった設定を使う{{r:39,40}}。VPC 共有にはこの方法を使えないので{{r:39,41}}、移行前に依存をなくす。</li>
   <li><b>新組織では Identity Center の URL が必ず変わる。</b>会社のドメインの URL を先に入口にして、ブックマークを守る。</li>
   <li><b>影響がないことは計測で確認する。</b>本番と同じく組織の境界をまたぐパイロットで {{U}} の項目をすべて確認してから、本番に進む。</li>
 </ol>
@@ -72,12 +72,12 @@
 <tr><td>Deployments</td><td>CI/CD と IaC の実行ロール</td><td>パイプライン以外の書き込みを拒否</td><td><span class="tag t-rec">推奨</span></td></tr>
 <tr><td>Workloads（Prod / NonProd）</td><td>業務システム</td><td>ネットワークの変更を制限。Prod は削除系の操作も制限</td><td><span class="tag t-must">必須</span></td></tr>
 <tr><td>Sandbox</td><td>実験用。社内網とはつながない</td><td>高額なインスタンス、RI・Savings Plans の購入、TGW 接続を禁止。予算に上限</td><td><span class="tag t-rec">推奨</span></td></tr>
-<tr><td>Policy Staging</td><td>ポリシー変更の事前検証</td><td>本番の OU と同じ構造の子 OU を置く</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Policy Staging</td><td>ポリシー変更の事前検証</td><td>本番の OU と同じポリシーを付けた子 OU</td><td><span class="tag t-must">必須</span></td></tr>
 <tr><td>Exceptions</td><td>承認済みの例外</td><td>アカウント単位でポリシーを付け、四半期ごとに見直す</td><td><span class="tag t-rec">推奨</span></td></tr>
 <tr><td>Transitional</td><td>移行してきたアカウントの受け入れと棚卸し</td><td>Root のポリシーと、移行元と同等のバックアップポリシーだけ。Control Tower には登録しない</td><td><span class="tag t-must">必須</span></td></tr>
-<tr><td>Suspended</td><td>閉鎖待ちと、侵害時の隔離</td><td>組織の管理用ロール以外をすべて拒否</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Suspended</td><td>閉鎖待ちと、侵害時の隔離</td><td>組織の管理用ロール以外をすべて拒否。Control Tower には登録しない（Control Tower のロールも拒否されるため）</td><td><span class="tag t-must">必須</span></td></tr>
 </table></div>
-<p>Transitional では移行元の SCP と RCP が外れる。滞在は棚卸しの間だけにし、その間は検知で補う（組織を離れても、Security Hub の設定はアカウントに残る{{r:shremove}}）。統制を弱めたくない場合は、移行元の SCP と RCP を写した子 OU を Transitional の下に作る。</p>
+<p>Transitional では移行元の SCP と RCP が外れる。滞在は棚卸しの間だけにし、その間は検知で補う（組織を離れても、Security Hub の設定はアカウントに残る{{r:shremove}}）。統制を弱めたくない場合は、移行元の SCP と RCP を写した子 OU を Transitional の下に作る。組織 ID を条件にした部分は、新旧の ID を並べる（<a href="#c-cond">7.5</a>）。</p>
 
 <div class="table-wrap"><table>
 <tr><th>アカウント</th><th>OU</th><th>役割</th></tr>
@@ -104,22 +104,22 @@
 <p>リージョン拒否には、OU ごとに設定できる Control Tower のコントロール <code>CT.MULTISERVICE.PV.1</code> を使う{{r:ctouregion}}。ランディングゾーン全体のリージョン拒否は、ベースラインを有効にしたすべての OU に効き、OU ごとには設定できない{{r:24}}。</p>
 
 <h3 id="g-types">4.2 ポリシーの種類と上限</h3>
-<p>上限は公式ユーザーガイドの表による{{r:1}}。</p>
+<p>SCP と RCP は認可ポリシーで、管理アカウントには効かない。ほかは宣言型ポリシーで、公式の表に載っているものは管理アカウントにも効く。上限も同じ表による{{r:1}}。</p>
 <div class="table-wrap"><table>
-<tr><th>ポリシー</th><th>区分</th><th>管理アカウント</th><th>上限（数 / サイズ）</th><th>用途</th></tr>
-<tr><td>SCP</td><td>認可</td><td>効かない</td><td class="nw">10 / 10,240 文字</td><td>プリンシパルが実行できる操作の上限。2025-09 から IAM ポリシー言語のすべての要素を使える{{r:4}}</td></tr>
-<tr><td>RCP</td><td>認可</td><td>効かない</td><td class="nw">5 / 5,120 文字</td><td>リソースへのアクセスの上限（データ境界）</td></tr>
-<tr><td>EC2</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>IMDS、公開ブロック、許可 AMI、VPC 暗号化などの固定</td></tr>
-<tr><td>S3</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>S3 パブリックアクセスブロックの 4 項目を一括で設定する{{r:11}}</td></tr>
-<tr><td>タグ</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>タグのキーと値の標準化</td></tr>
-<tr><td>バックアップ</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>バックアッププランの一括配布</td></tr>
-<tr><td>AI サービスのオプトアウト</td><td>宣言型</td><td>効く</td><td class="nw">5 / 2,500</td><td>AI サービスがサービス改善にコンテンツを使うのを止める{{r:12}}</td></tr>
-<tr><td>Security Hub</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>新しい Security Hub の有効化と設定{{r:19,64}}</td></tr>
-<tr><td>Inspector</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>Inspector の一括有効化</td></tr>
-<tr><td>Bedrock</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>推論の呼び出しに Guardrails を自動で適用する{{r:18}}</td></tr>
-<tr><td>チャットアプリケーション</td><td>宣言型</td><td>効く</td><td class="nw">5 / 10,000</td><td>接続できる Slack ワークスペースと Teams テナントを限定する{{r:16}}</td></tr>
-<tr><td>Upgrade rollout</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>RDS / Aurora の自動マイナーバージョンアップグレードの順序{{r:17}}</td></tr>
-<tr><td>Shield Network Security Director</td><td>宣言型</td><td>—</td><td class="nw">{{U}} 表に記載なし</td><td>Network Security Director の一括有効化{{r:20}}</td></tr>
+<tr><th>ポリシー</th><th>上限（数 / サイズ）</th><th>用途</th></tr>
+<tr><td>SCP</td><td class="nw">10 / 10,240 文字</td><td>プリンシパルが実行できる操作の上限。2025-09 から IAM ポリシー言語のすべての要素を使える{{r:4}}</td></tr>
+<tr><td>RCP</td><td class="nw">5 / 5,120 文字</td><td>リソースへのアクセスの上限（データ境界）</td></tr>
+<tr><td>EC2</td><td class="nw">10 / 10,000</td><td>IMDS、公開ブロック、許可 AMI、VPC 暗号化などの固定</td></tr>
+<tr><td>S3</td><td class="nw">10 / 10,000</td><td>S3 パブリックアクセスブロックの 4 項目を一括で設定する{{r:11}}</td></tr>
+<tr><td>タグ</td><td class="nw">10 / 10,000</td><td>タグのキーと値の標準化</td></tr>
+<tr><td>バックアップ</td><td class="nw">10 / 10,000</td><td>バックアッププランの一括配布</td></tr>
+<tr><td>AI サービスのオプトアウト</td><td class="nw">5 / 2,500</td><td>AI サービスがサービス改善にコンテンツを使うのを止める{{r:12}}</td></tr>
+<tr><td>Security Hub</td><td class="nw">10 / 10,000</td><td>新しい Security Hub の有効化と設定{{r:19,64}}</td></tr>
+<tr><td>Inspector</td><td class="nw">10 / 10,000</td><td>Inspector の一括有効化</td></tr>
+<tr><td>Bedrock</td><td class="nw">10 / 10,000</td><td>推論の呼び出しに Guardrails を自動で適用する{{r:18}}</td></tr>
+<tr><td>チャットアプリケーション</td><td class="nw">5 / 10,000</td><td>接続できる Slack ワークスペースと Teams テナントを限定する{{r:16}}</td></tr>
+<tr><td>Upgrade rollout</td><td class="nw">10 / 10,000</td><td>RDS / Aurora の自動マイナーバージョンアップグレードの順序{{r:17}}</td></tr>
+<tr><td>Shield Network Security Director</td><td class="nw">表に記載なし</td><td>Network Security Director の一括有効化{{r:20}}</td></tr>
 </table></div>
 <p>数の上限は、直接付けたポリシーだけを数える。SCP は常に 1 本以上付いている必要があり{{r:33}}、SCP を有効にすると FullAWSAccess が付く{{r:scpeval}}。RCP を有効にすると、外せない <code>RCPFullAWSAccess</code> が Root とすべての OU・アカウントに付き、5 本の上限に数えられる{{r:33}}。そのため独自の RCP は 4 本までになる。サイズは、コンソールで保存すると空白を除いて数え、CLI・SDK（IaC を含む）では書いたとおりに数える{{r:33}}。</p>
 
@@ -128,19 +128,24 @@
 <div class="table-wrap"><table>
 <tr><th>SCP</th><th>付与先</th><th>主な拒否</th><th>例外</th></tr>
 <tr><td>Root-Guard</td><td>Root</td><td>組織からの離脱（<code>organizations:LeaveOrganization</code>）と、他組織からの招待の承諾（<code>organizations:AcceptHandshake</code>）</td><td>なし</td></tr>
-<tr><td>Baseline</td><td>Transitional 以外の各 OU</td><td>CloudTrail・Config・GuardDuty・Security Hub・Access Analyzer の停止と削除、IAM ユーザーとアクセスキーの作成、ルートの長期の認証情報の使用、EBS の既定の暗号化の無効化、リージョンの有効化と無効化、例外用ロールの作成と変更</td><td>Control Tower の実行ロール、セキュリティ自動化用のロール</td></tr>
+<tr><td>Baseline</td><td>Transitional 以外の各 OU</td><td>CloudTrail・Config・GuardDuty・Security Hub・Access Analyzer の停止と削除、IAM ユーザーとアクセスキーの作成、ルートの長期の認証情報の使用、EBS の既定の暗号化の無効化、リージョンの有効化と無効化、例外用ロールの作成と変更</td><td>Control Tower の実行ロール、セキュリティ自動化用と IAM の例外用のロール</td></tr>
 <tr><td>リージョン拒否</td><td>Transitional 以外の各 OU</td><td>許可リージョン以外への操作（<code>CT.MULTISERVICE.PV.1</code>）。IAM や請求などのグローバルサービスは、コントロールの SCP で対象外になっている{{r:ctouregion}}</td><td><code>ExemptedPrincipalARNs</code> と <code>ExemptedActions</code> で足す{{r:ctouregion}}</td></tr>
 <tr><td>Protect-Security</td><td>Security</td><td>ログバケットと KMS キーの削除、ポリシーの変更</td><td>ログ管理用のロール</td></tr>
 <tr><td>Protect-Network</td><td>Infrastructure、Workloads</td><td>TGW、VPC ピアリング、IGW、Direct Connect、Route 53 Resolver の作成と変更</td><td>ネットワーク用とパイプライン用のロール</td></tr>
-<tr><td>Prod-Protect</td><td>Workloads/Prod</td><td><code>kms:ScheduleKeyDeletion</code>、<code>backup:DeleteBackupVault</code>、<code>backup:DeleteRecoveryPoint</code>、<code>rds:DeleteDBInstance</code>、<code>rds:DeleteDBCluster</code></td><td>ブレークグラス用のロール</td></tr>
+<tr><td>Prod-Protect</td><td>Workloads/Prod</td><td><code>kms:ScheduleKeyDeletion</code>、<code>backup:DeleteBackupVault</code>、<code>backup:DeleteRecoveryPoint</code>、<code>rds:DeleteDBInstance</code>、<code>rds:DeleteDBCluster</code></td><td>緊急用のロール（D5）</td></tr>
 <tr><td>CI-Only</td><td>Deployments</td><td>パイプライン用のロール以外による書き込み</td><td>パイプライン用のロール</td></tr>
 <tr><td>Sandbox-Cost</td><td>Sandbox</td><td>許可していないインスタンスタイプ（<code>ec2:InstanceType</code> 条件）、RI・Savings Plans の購入、TGW 接続</td><td>なし</td></tr>
 <tr><td>Deny-All</td><td>Suspended</td><td>すべての操作</td><td>組織の管理用ロール</td></tr>
 </table></div>
 
-<p><b>Root-Guard で招待の承諾も拒否する理由：</b>直接移行では、移行先から届いた招待をアカウント側で承諾するだけで組織を移る{{r:35}}。離脱の拒否だけでは足りない。<code>LeaveOrganization</code> の権限が要るかは、公式ドキュメントの中で記述が分かれる。移行のページは直接移行では不要とし{{r:35}}、招待の承諾のページは組織のメンバーなら必要としている{{r:acceptinv}}（{{U}} どちらが正しいか）。そこで両方を拒否する。</p>
-<p><b>Root に付けた拒否は、その下のすべての OU とアカウントに効く</b>{{r:scpeval}}。切り戻しや事業の売却でアカウントを組織の外へ出すときだけ、変更管理のもとで対象アカウントを除外する条件（<code>"StringNotEquals": {"aws:PrincipalAccount": ["対象のアカウント ID"]}</code>）を加え、終わったら戻す。</p>
+<dl class="notes">
+  <dt>招待の承諾も拒否する理由</dt>
+  <dd>直接移行では、移行先から届いた招待をアカウント側で承諾するだけで組織を移る{{r:35}}。離脱の拒否だけでは足りない。<code>LeaveOrganization</code> の権限が要るかは、公式ドキュメントの中で記述が分かれる。移行のページは直接移行では不要とし{{r:35}}、招待の承諾のページは組織のメンバーなら必要としている{{r:acceptinv}}（{{U}} どちらが正しいか）。そこで両方を拒否する。</dd>
+  <dt>Root-Guard の一時的な除外</dt>
+  <dd>Root に付けた拒否は、その下のすべての OU とアカウントに効く{{r:scpeval}}。切り戻しや事業の売却でアカウントを組織の外へ出すときだけ、変更管理のもとで対象アカウントを除外する条件（<code>"StringNotEquals": {"aws:PrincipalAccount": ["対象のアカウント ID"]}</code>）を加え、終わったら戻す。</dd>
+</dl>
 
+<p class="meta">例：Root-Guard</p>
 <pre><code>{
   "Version": "2012-10-17",
   "Statement": [{
@@ -151,6 +156,7 @@
   }]
 }</code></pre>
 
+<p class="meta">例：Baseline</p>
 <pre><code>{
   "Version": "2012-10-17",
   "Statement": [
@@ -200,12 +206,16 @@
       ] } } }
   ]
 }</code></pre>
-<ul class="list">
-  <li><b>例外に使うロールは、作成と変更を SCP で拒否して守る。</b><code>org-security-automation</code> と <code>org-iam-exception</code> は本書の仮の名前。Control Tower も、例外にしている StackSets のロールを同じ形の必須コントロールで守り、子アカウントのプリンシパルがそのロールで権限を得られないようにしている{{r:27}}。</li>
-  <li><b>ルートは長期の認証情報だけを拒否する。</b><code>DenyRootLongTermCredentials</code> は公式ドキュメントの例と同じ形で、ルートの長期の認証情報の使用だけを拒否し、<code>AssumeRoot</code> のセッションは拒否しない{{r:77}}。</li>
-  <li><b>Security Hub の停止は 2 つの操作で拒否する。</b>新しい Security Hub には <code>DisableSecurityHub</code> とは別に <code>DisableSecurityHubV2</code> がある{{r:66}}。</li>
-  <li><b>EBS の既定の暗号化は IaC で設定する。</b>リージョンごとのアカウント設定で、EC2 ポリシーでは設定できない{{r:8}}。全アカウント・全許可リージョンで有効にし、無効化を SCP で拒否する。準拠は Security Hub の EC2.7 で確認する{{r:80}}。有効にしても、既存のボリュームとスナップショットには影響しない{{r:ebsdef}}。既定のキーは AWS マネージドキー（<code>aws/ebs</code>）で{{r:ebsdef}}、これで暗号化したスナップショットを使う AMI は他のアカウントに共有できない{{r:amishare}}。AMI を配るアカウントは、カスタマー管理キーを既定にする。</li>
-</ul>
+<dl class="notes">
+  <dt>例外に使うロールの保護</dt>
+  <dd>作成と変更を SCP で拒否する（<code>ProtectExceptionRoles</code>）。<code>org-security-automation</code> と <code>org-iam-exception</code> は本書の仮の名前。Control Tower も、例外にしている StackSets のロールを同じ形の必須コントロールで守り、子アカウントのプリンシパルがそのロールで権限を得られないようにしている{{r:27}}。</dd>
+  <dt>ルートユーザー</dt>
+  <dd>長期の認証情報だけを拒否する。<code>DenyRootLongTermCredentials</code> は公式ドキュメントの例と同じ形で、<code>AssumeRoot</code> のセッションは拒否しない{{r:77}}。</dd>
+  <dt>Security Hub の停止</dt>
+  <dd>新しい Security Hub には <code>DisableSecurityHub</code> とは別に <code>DisableSecurityHubV2</code> がある{{r:66}}ので、両方を拒否する。</dd>
+  <dt>EBS の既定の暗号化</dt>
+  <dd>IaC で設定する。リージョンごとのアカウント設定で、EC2 ポリシーでは設定できない{{r:8}}。全アカウント・全許可リージョンで有効にし、無効化を SCP で拒否する。準拠は Security Hub の EC2.7 で確認する{{r:80}}。有効にしても、既存のボリュームとスナップショットには影響しない{{r:ebsdef}}。既定のキーは AWS マネージドキー（<code>aws/ebs</code>）で{{r:ebsdef}}、これで暗号化したスナップショットを使う AMI は他のアカウントに共有できない{{r:amishare}}。AMI を配るアカウントは、カスタマー管理キーを既定にする。</dd>
+</dl>
 
 <h3 id="g-rcp">4.4 RCP</h3>
 <p>RCP は、組織外のプリンシパルからのアクセスも止める。対象サービスは 60 を超えるが{{r:5}}、最初は S3・STS・KMS・SQS・Secrets Manager に絞る。公式ドキュメントも、影響を十分に試さずに Root へ付けないよう強く勧めている{{r:5}}。</p>
@@ -214,12 +224,17 @@
 <tr><td>Perimeter-Core</td><td>信頼する組織以外の ID によるアクセスを拒否する（<code>aws:PrincipalOrgID</code>）。AWS サービスによるアクセスは、自組織のリソースを起点とするものに限る（<code>aws:SourceOrgID</code>）{{r:77}}</td><td>テスト用アカウント → 下位の OU → Transitional 以外の各 OU の順に広げる{{r:5}}</td></tr>
 <tr><td>Enforce-TLS</td><td><code>aws:SecureTransport</code> が false のアクセスを拒否する{{r:6}}</td><td>Transitional 以外の各 OU</td></tr>
 </table></div>
-<ul class="list">
-  <li><b>STS はフェデレーションを対象から外す。</b><code>sts:AssumeRoleWithSAML</code> と <code>sts:AssumeRoleWithWebIdentity</code> のリクエストには <code>aws:PrincipalOrgID</code> が含まれない{{r:75}}。<code>sts:*</code> にかけると、GitHub Actions などの OIDC、EKS の IRSA{{r:83}}、IdP から IAM への直接の SAML が拒否される。STS には <code>sts:AssumeRole</code> だけにかけ、フェデレーションはロールの信頼ポリシーで絞る{{r:75}}。Identity Center が作るロールでは <code>AssumeRoleWithSAML</code> を使えない{{r:82}}（{{U}} Identity Center 経由のサインインに RCP が影響しないこと）。</li>
-  <li><b>移行期間中は、新旧両方の組織 ID を並べる。</b>否定形の条件演算子に複数の値を書くと NOR で評価されるので{{r:55}}、両方を並べれば「どちらの組織でもない場合だけ拒否」になる。旧組織を削除したら旧 ID を外す。</li>
-  <li><b>組織外からの正当なアクセスは、先に例外にする。</b>IAM Access Analyzer の外部アクセスの検出結果で洗い出し{{r:aa}}、<code>aws:PrincipalAccount</code> で除外する（D3）。ELB のアクセスログを受けるバケットが旧形式のポリシーなら、新形式に直してから付ける。旧形式は ELB の AWS アカウントをプリンシパルにし、新形式はサービスプリンシパルを使う{{r:elb}}。</li>
-  <li><b>S3 のウェブサイトエンドポイントは HTTPS に対応しない</b>{{r:s3web}}。TLS を強制する前に、公開コンテンツを CloudFront と OAC の配信に移す。</li>
-</ul>
+<dl class="notes">
+  <dt>STS とフェデレーション</dt>
+  <dd>フェデレーションの API を対象から外す。<code>sts:AssumeRoleWithSAML</code> と <code>sts:AssumeRoleWithWebIdentity</code> のリクエストには <code>aws:PrincipalOrgID</code> が含まれない{{r:75}}。<code>sts:*</code> にかけると、GitHub Actions などの OIDC、EKS の IRSA{{r:83}}、IdP から IAM への直接の SAML が拒否される。STS には <code>sts:AssumeRole</code> だけにかけ、フェデレーションはロールの信頼ポリシーで絞る{{r:75}}。Identity Center が作るロールでは <code>AssumeRoleWithSAML</code> を使えない{{r:82}}（{{U}} Identity Center 経由のサインインに RCP が影響しないこと）。</dd>
+  <dt>移行期間中の組織 ID</dt>
+  <dd>新旧両方の組織 ID を並べる。否定形の条件演算子に複数の値を書くと NOR で評価されるので{{r:55}}、両方を並べれば「どちらの組織でもない場合だけ拒否」になる。旧組織を削除したら旧 ID を外す。</dd>
+  <dt>組織外からのアクセス</dt>
+  <dd>正当なものは先に例外にする。IAM Access Analyzer の外部アクセスの検出結果で洗い出し{{r:aa}}、<code>aws:PrincipalAccount</code> で除外する（D3）。ELB のアクセスログを受けるバケットが旧形式のポリシーなら、新形式に直してから付ける。旧形式は ELB の AWS アカウントをプリンシパルにし、新形式はサービスプリンシパルを使う{{r:elb}}。</dd>
+  <dt>S3 のウェブサイトエンドポイント</dt>
+  <dd>HTTPS に対応しない{{r:s3web}}。TLS を強制する前に、公開コンテンツを CloudFront と OAC の配信に移す。</dd>
+</dl>
+<p class="meta">例：Perimeter-Core の S3 の部分</p>
 <pre><code>{
   "Version": "2012-10-17",
   "Statement": [
@@ -239,7 +254,7 @@
         "Bool": { "aws:PrincipalIsAWSService": "true" } } }
   ]
 }</code></pre>
-<p class="meta">S3 の例。<code>111122223333</code> は D3 で例外にする組織外のアカウント。同じブロックに書いた条件キーは AND で評価されるので{{r:55}}、組織内か例外のアカウントなら拒否されない。</p>
+<p class="meta"><code>111122223333</code> は D3 で例外にする組織外のアカウント。同じブロックに書いた条件キーは AND で評価されるので{{r:55}}、組織内か例外のアカウントなら拒否されない。</p>
 
 <h3 id="g-decl">4.5 宣言型ポリシー</h3>
 <p>宣言型ポリシーは、API の許可・拒否ではなくサービスの設定を固定する。サービスリンクロールにも効き、外すと付ける前の設定に戻る{{r:2}}。</p>
@@ -253,6 +268,7 @@
 <tr><td><code>allowed_images_settings</code></td><td>まず <code>audit_mode</code>、次に <code>enabled</code></td><td>Workloads/Prod</td><td><code>enabled</code> では、許可した AMI からしか起動できない{{r:amis}}</td></tr>
 <tr><td><code>vpc_encryption_control</code></td><td><code>attempt_monitor</code></td><td>暗号化の監査が必要な OU だけ</td><td>2026-03 から有料（<a href="#cost">9 章</a>）。いきなり強制にしない</td></tr>
 </table></div>
+<p class="meta">例：EC2 ポリシー</p>
 <pre><code>{
   "ec2_attributes": {
     "exception_message": { "@@assign": "Denied by organization policy. See https://wiki.example.com/aws-guardrails" },
@@ -296,14 +312,20 @@
 
 <!-- 5 -->
 <h2 id="identity">5. ID・ルート・ログ・検知</h2>
-<ul class="list">
-  <li><b>ルートユーザー：</b>ルートアクセスの一元管理を有効にし、メンバーアカウントのルートのパスワード・アクセスキー・MFA を削除する{{r:30}}。移ってきたアカウントは、削除の前にルートの認証情報が使われていないことを確認する（<a href="#g-check">4.6</a>）。特権タスクは、管理アカウントか委任管理者から、最大 15 分のルートセッションで行う。使えるのは、ルートの認証情報の監査・削除・パスワードの再作成と、S3・SQS のポリシーのロック解除だけ{{r:assumeroot}}。</li>
-  <li><b>IAM Identity Center：</b>許可セットを「OU × 職務」で標準化する。本番の書き込み権限は、承認を経た一時的な昇格で渡す{{r:team}}。</li>
-  <li><b>機械用の ID：</b>CI/CD は OIDC フェデレーションを使い、長期のアクセスキーを発行しない（STS の RCP は <a href="#g-rcp">4.4</a> に従う）。使っていない権限は IAM Access Analyzer で見直す。</li>
-  <li><b>代替連絡先：</b>請求・運用・セキュリティの代替連絡先には、個人ではなく配布リストを登録する。メンバーアカウントの分は、管理アカウントか委任管理者からまとめて更新できる{{r:79}}。</li>
-  <li><b>監査ログ：</b>組織の CloudTrail（Control Tower 連携）を Log Archive に保管する。Control Tower のログバケットには、ポリシー・ログ設定・暗号化・ライフサイクルの変更を禁じる必須コントロールがかかる{{r:27}}。{{U}} このバケットに後から Object Lock を加えられるか。</li>
-  <li><b>検知：</b>GuardDuty・Security Hub・Inspector・Macie・Detective・Access Analyzer を Audit アカウントに委任し、自動有効化を設定する。移行時の注意は <a href="#c-auto">7.6</a>。</li>
-</ul>
+<dl class="notes">
+  <dt>ルートユーザー</dt>
+  <dd>ルートアクセスの一元管理を有効にし、メンバーアカウントのルートのパスワード・アクセスキー・MFA を削除する{{r:30}}。移ってきたアカウントは、削除の前にルートの認証情報が使われていないことを確認する（<a href="#g-check">4.6</a>）。特権タスクは、管理アカウントか委任管理者から、最大 15 分のルートセッションで行う。使えるのは、ルートの認証情報の監査・削除・パスワードの再作成と、S3・SQS のポリシーのロック解除だけ{{r:assumeroot}}。</dd>
+  <dt>IAM Identity Center</dt>
+  <dd>許可セットを「OU × 職務」で標準化する。本番の書き込み権限は、承認を経た一時的な昇格で渡す{{r:team}}。</dd>
+  <dt>機械用の ID</dt>
+  <dd>CI/CD は OIDC フェデレーションを使い、長期のアクセスキーを発行しない（STS の RCP は <a href="#g-rcp">4.4</a> に従う）。使っていない権限は IAM Access Analyzer で見直す。</dd>
+  <dt>代替連絡先</dt>
+  <dd>請求・運用・セキュリティの代替連絡先には、個人ではなく配布リストを登録する。メンバーアカウントの分は、管理アカウントか委任管理者からまとめて更新できる{{r:79}}。</dd>
+  <dt>監査ログ</dt>
+  <dd>組織の CloudTrail（Control Tower 連携）を Log Archive に保管する。Control Tower のログバケットには、ポリシー・ログ設定・暗号化・ライフサイクルの変更を禁じる必須コントロールがかかる{{r:27}}。{{U}} このバケットに後から Object Lock を加えられるか。</dd>
+  <dt>検知</dt>
+  <dd>GuardDuty・Security Hub・Inspector・Macie・Detective・Access Analyzer を Audit アカウントに委任し、自動有効化を設定する。移行時の注意は <a href="#c-auto">7.6</a>。</dd>
+</dl>
 
 <!-- 6 -->
 <h2 id="method">6. 移行方式の選択</h2>
@@ -351,7 +373,7 @@
 <tr><td>組織内で作成してから 4 日未満のアカウント</td><td>移せない。招待で参加したアカウントは対象外{{r:35}}</td></tr>
 <tr><td>閉鎖済み・停止中のアカウント</td><td>移せない{{r:35}}</td></tr>
 <tr><td>委任管理者のアカウント</td><td>先に登録を解除する{{r:35}}。解除でデータや設定が消えるサービスがある（下の表）</td></tr>
-<tr><td>旧組織の Control Tower に登録したアカウント</td><td>移す前に、アカウントに直接適用した Control Tower のベースラインと、検出・プロアクティブコントロールを無効にする。予防コントロールは継承したままでよい。自動登録を使っているなら、Root、未登録の OU、ランディングゾーン 4.0 以降なら予防コントロールだけの OU のどれかへ移す{{r:ctxfer}}。登録を外すと、Control Tower がアカウントに作ったリソースは削除される{{r:89}}。Account Factory で作ったアカウントには、既定で Control Tower が VPC を作る{{r:90}}（{{U}} この VPC が削除の対象になるか）</td></tr>
+<tr><td>旧組織の Control Tower に登録したアカウント</td><td>移す前に登録を外す。アカウントに直接適用したベースラインと、検出・プロアクティブコントロールを無効にする。予防コントロールは継承したままでよい。自動登録を使っているなら、Root、未登録の OU、ランディングゾーン 4.0 以降なら予防コントロールだけの OU のどれかへ移す{{r:ctxfer}}。影響は <a href="#c-auto">7.6</a></td></tr>
 <tr><td>移行元の SCP・IAM ポリシー</td><td>移行を妨げるポリシーがあってはならない{{r:35}}。招待の承諾には <code>organizations:AcceptHandshake</code>、組織のメンバーなら <code>organizations:LeaveOrganization</code>、サービスリンクロールの作成が要る場合は <code>iam:CreateServiceLinkedRole</code> が要る{{r:acceptinv}}</td></tr>
 <tr><td>アカウント数の上限</td><td>既定は 10 で、送信中の招待も数える。移す全数に余裕を足して先に引き上げる。24 時間に送れる招待は、20 件とアカウント数の上限の大きいほう{{r:33}}</td></tr>
 <tr><td>招待の失効</td><td>15 日で失効する{{r:33,67}}。ウェーブの直前に送る</td></tr>
@@ -370,10 +392,12 @@
 
 <h3 id="c-share">7.3 共有（RAM ほか）</h3>
 <p>組織内の共有は、利用者のアカウントが組織を離れると外れる。OU・組織全体・組織内の個別アカウントのどれに共有していても同じ{{r:39}}。<code>RetainSharingOnAccountLeaveOrganization=true</code> で作った共有では、利用者に招待が送られ（外部との共有と同じ）、利用者が組織を離れてもアクセスが残る{{r:39}}。本書ではこれを「ブリッジ共有」と呼ぶ。</p>
-<ul class="list">
-  <li><b>条件：</b><code>allowExternalPrincipals=true</code> が要る。新しく作る共有にしか設定できず、OU や組織全体への共有と、組織内でしか共有できない種類には使えない{{r:39}}。</li>
-  <li><b>SCP との関係：</b>条件キー <code>ram:RetainSharingOnAccountLeaveOrganization</code> で、組織全体に強制できる{{r:40}}。移行元で外部との共有を禁じる SCP（<code>ram:RequestedAllowsExternalPrincipals</code>）{{r:42}}があるとブリッジ共有を作れない。移行先の SCP が <code>ram:AcceptResourceShareInvitation</code> を拒否していないことも確認する{{r:44}}。</li>
-</ul>
+<dl class="notes">
+  <dt>条件</dt>
+  <dd><code>allowExternalPrincipals=true</code> が要る。新しく作る共有にしか設定できず、OU や組織全体への共有と、組織内でしか共有できない種類には使えない{{r:39}}。</dd>
+  <dt>SCP との関係</dt>
+  <dd>条件キー <code>ram:RetainSharingOnAccountLeaveOrganization</code> で、組織全体に強制できる{{r:40}}。移行元で外部との共有を禁じる SCP（<code>ram:RequestedAllowsExternalPrincipals</code>）{{r:42}}があるとブリッジ共有を作れない。招待を承諾するアカウントに効く SCP（承諾は移行前なので、通常は移行元の組織）が <code>ram:AcceptResourceShareInvitation</code> を拒否していないことも確認する{{r:44}}。</dd>
+</dl>
 
 <figure class="diagram">
   <div class="canvas"><a href="diagrams/migration-bridge-share.drawio.svg" target="_blank" rel="noopener"><img src="diagrams/migration-bridge-share.drawio.svg" alt="移行中のネットワーク共有。ブリッジ共有で TGW と Resolver ルールへのアクセスが続き、組織宛の元の共有は移行で外れる"></a></div>
@@ -432,43 +456,47 @@
 <p>{{U}} 共有が外れている間の、Fargate、VPC 内の Lambda、RDS の保守など、ENI を作るサービスごとの挙動。</p>
 
 <h3 id="c-cond">7.5 権限の条件</h3>
-<ul class="list">
-  <li><b>条件キー：</b><code>aws:PrincipalOrgID</code>、<code>aws:PrincipalOrgPaths</code>、<code>aws:ResourceOrgID</code>、<code>aws:ResourceOrgPaths</code>、<code>aws:SourceOrgID</code>、<code>aws:SourceOrgPaths</code>{{r:77}}。組織 ID を指定した IAM ポリシーは、移行に合わせて更新が要る{{r:35}}。移行前に新旧両方の組織 ID を並べ、旧組織を削除したら旧 ID を外す{{r:55}}。</li>
-  <li><b>OU パス：</b>パスはアカウントが属する OU の位置を表す{{r:77}}。新組織の中で OU を移っても変わるので、Transitional と配置先の両方のパスを並べるか、組織単位のパス（<code>o-xxxxxxxxxx/*</code>）にする。</li>
-  <li><b>直す場所：</b>S3 バケットポリシー、KMS キーポリシー、IAM ロールの信頼ポリシー、SNS・SQS・Lambda・ECR・Secrets Manager のリソースポリシー、AWS Backup のボールトのポリシー、EventBridge のイベントバスのポリシー、VPC エンドポイントポリシー、StackSets のロール、CloudWatch Logs の宛先ポリシー{{r:logsdest}}、CloudWatch のアカウント間監視のシンクポリシー{{r:oamapi}}、両方の組織の SCP と RCP。旧組織に残るリソースと新組織のリソースの両方を直す。</li>
-  <li><b>Identity Center のロール：</b>割り当てで作られるロール（<code>AWSReservedSSO_許可セット名_接尾辞</code>）は、アカウントの割り当てがすべて消えると削除され、次の割り当てでは別の接尾辞のロールになる{{r:71}}。このロールの ARN を KMS キーポリシーや EKS の <code>aws-auth</code> ConfigMap で参照していて、IAM で作った代わりのロールがないと、AWS サポートに頼まないと戻せない{{r:71}}。移行の前に、IAM で作ったロールをこれらに加えておく。ほかのリソースポリシーは、新しい割り当ての直後に更新する。</li>
-  <li><b>管理用のロール：</b>旧管理アカウントからのアクセス用のロール（<code>OrganizationAccountAccessRole</code> など）は、移行しても自動では削除されない{{r:35}}。招待で参加したアカウントには、新組織の管理アカウント用のロールが自動では作られない{{r:68}}。移行の前に信頼先へ新組織の管理アカウントを加え、移行後に旧管理アカウントを外す。Control Tower に登録していたアカウントでは、登録を外すと Control Tower が実行ロールを削除して組織の管理用ロールを加え、移行先で登録すると新しい管理アカウントを信頼する実行ロールが作られる{{r:ctxfer}}。</li>
-</ul>
+<dl class="notes">
+  <dt>条件キー</dt>
+  <dd><code>aws:PrincipalOrgID</code>、<code>aws:PrincipalOrgPaths</code>、<code>aws:ResourceOrgID</code>、<code>aws:ResourceOrgPaths</code>、<code>aws:SourceOrgID</code>、<code>aws:SourceOrgPaths</code>{{r:77}}。組織 ID を指定した IAM ポリシーは、移行に合わせて更新が要る{{r:35}}。移行前に新旧両方の組織 ID を並べ、旧組織を削除したら旧 ID を外す{{r:55}}。</dd>
+  <dt>OU パス</dt>
+  <dd>パスはアカウントが属する OU の位置を表す{{r:77}}。新組織の中で OU を移っても変わるので、Transitional と配置先の両方のパスを並べるか、組織単位のパス（<code>o-xxxxxxxxxx/*</code>）にする。</dd>
+  <dt>直す場所</dt>
+  <dd>S3 バケットポリシー、KMS キーポリシー、IAM ロールの信頼ポリシー、SNS・SQS・Lambda・ECR・Secrets Manager のリソースポリシー、AWS Backup のボールトのポリシー、EventBridge のイベントバスのポリシー、VPC エンドポイントポリシー、StackSets のロール、CloudWatch Logs の宛先ポリシー{{r:logsdest}}、CloudWatch のアカウント間監視のシンクポリシー{{r:oamapi}}、両方の組織の SCP と RCP。旧組織に残るリソースと新組織のリソースの両方を直す。</dd>
+  <dt>Identity Center のロール</dt>
+  <dd>割り当てで作られるロール（<code>AWSReservedSSO_許可セット名_接尾辞</code>）は、アカウントの割り当てがすべて消えると削除され、次の割り当てでは別の接尾辞のロールになる{{r:71}}。このロールの ARN を KMS キーポリシーや EKS の <code>aws-auth</code> ConfigMap で参照していて、IAM で作った代わりのロールがないと、AWS サポートに頼まないと戻せない{{r:71}}。移行の前に、IAM で作ったロールをこれらに加えておく。ほかのリソースポリシーは、新しい割り当ての直後に更新する。</dd>
+  <dt>管理用のロール</dt>
+  <dd>旧管理アカウントからのアクセス用のロール（<code>OrganizationAccountAccessRole</code> など）は、移行しても自動では削除されない{{r:35}}。招待で参加したアカウントには、新組織の管理アカウント用のロールが自動では作られない{{r:68}}。移行の前に信頼先へ新組織の管理アカウントを加え、移行後に旧管理アカウントを外す。Control Tower に登録していたアカウントでは、登録を外すと Control Tower が実行ロールを削除して組織の管理用ロールを加え、移行先で登録すると新しい管理アカウントを信頼する実行ロールが作られる{{r:ctxfer}}。</dd>
+</dl>
 
 <h3 id="c-auto">7.6 組織の自動化</h3>
 <p>組織の自動化は、アカウントが旧組織を出るときと、新組織に入るときの両方で動く。</p>
 <div class="table-wrap"><table class="lbl">
 <tr><th>旧組織を出るとき</th><th>起きること</th><th>事前の対処</th></tr>
-<tr><td><b>StackSets</b>（サービスマネージド）</td><td><b>自動デプロイが有効で、スタックを保持しない設定だと、アカウントが外れたときにスタックのリソースが削除される</b>{{r:56}}</td><td>「スタックを保持」に変える。新組織では、既存のスタックを StackSet に取り込める{{r:stimport}}。残したスタックと同じ名前のリソースは、新組織の StackSets で作らない</td></tr>
-<tr><td><b>Firewall Manager</b></td><td>ポリシーの対象から外れる。リソースクリーンアップが有効だと、保護の解除と管理下のリソースの削除が起きる{{r:57}}</td><td>クリーンアップを無効にし、新組織で同等のポリシーを先に動かす。DNS Firewall のルールグループは旧ポリシーと優先度を変え、重複に備えてクォータを一時的に 2 倍にする{{r:54}}</td></tr>
-<tr><td><b>Control Tower</b></td><td>移す前に登録を外す必要があり、外すと Control Tower が作ったリソースが削除される{{r:ctxfer,89}}</td><td><a href="#c-blockers">7.2</a> の手順で外す。Account Factory の VPC でワークロードが動いているなら、パイロットで削除の対象かを確認する（<a href="#p-limits">8.5</a>）</td></tr>
+<tr><td>StackSets（サービスマネージド）</td><td><b>自動デプロイが有効で、スタックを保持しない設定だと、アカウントが外れたときにスタックのリソースが削除される</b>{{r:56}}</td><td>「スタックを保持」に変える。新組織では、既存のスタックを StackSet に取り込める{{r:stimport}}。残したスタックと同じ名前のリソースは、新組織の StackSets で作らない</td></tr>
+<tr><td>Firewall Manager</td><td>ポリシーの対象から外れる。リソースクリーンアップが有効だと、保護の解除と管理下のリソースの削除が起きる{{r:57}}</td><td>クリーンアップを無効にし、新組織で同等のポリシーを先に動かす。DNS Firewall のルールグループは旧ポリシーと優先度を変え、重複に備えてクォータを一時的に 2 倍にする{{r:54}}</td></tr>
+<tr><td>Control Tower</td><td>移す前に登録を外す必要がある{{r:ctxfer}}。外すと、Control Tower がアカウントに作ったリソースは削除される{{r:89}}。Account Factory で作ったアカウントには、既定で Control Tower が VPC を作る{{r:90}}</td><td><a href="#c-blockers">7.2</a> の手順で外す。{{U}} Account Factory の VPC が削除の対象になるか。この VPC でワークロードが動いているなら、パイロットで確認するまで移さない（<a href="#p-limits">8.5</a>）</td></tr>
 <tr><td>Config</td><td>組織の Config ルールと適合パックが削除される{{r:cfgorgdoc}}。アグリゲーターのデータは最大 24 時間で消える{{r:54}}</td><td>下の「Config レコーダー」</td></tr>
 <tr><td>バックアップポリシー</td><td>組織ポリシーが適用されなくなり、ポリシー由来のプランも止まる{{r:orgremove}}</td><td>Transitional に同等のポリシーを付けるか、移行前にアカウント内にプランを作る</td></tr>
 <tr><td>Security Hub・GuardDuty など</td><td>Security Hub は、組織を離れても同じ設定で有効のまま{{r:shremove}}。GuardDuty なども管理者との関連付けが外れるだけで、設定は残る{{r:gddisassoc,54}}</td><td>なし</td></tr>
 <tr><td>Identity Center</td><td>アカウント内のメタデータとリソースが自動で削除され、そのアカウントは Identity Center で使えなくなる{{r:ssoint}}</td><td><a href="#c-access">7.7</a></td></tr>
 </table></div>
 
+<p>OU やアカウントで対象を指定する自動化は、Root と Transitional を対象にしない。StackSets の自動デプロイ{{r:56}}、Firewall Manager{{r:57}}、Systems Manager Quick Setup のパッチポリシー{{r:qs}}が当たる。パッチポリシーは適用後の再起動も選べる{{r:qs}}ので、特に注意する。ログの収集のように読み取るだけの自動化は、Transitional も対象に含めてよい。そのほかは次のとおり扱う。</p>
 <div class="table-wrap"><table class="lbl">
 <tr><th>新組織に入るとき</th><th>対象の指定</th><th>移行中の扱い</th></tr>
 <tr><td>Root のポリシー</td><td>Root</td><td>動作を変えないものだけにする（<a href="#g-where">4.1</a>）</td></tr>
-<tr><td><b>GuardDuty の自動有効化</b>（エージェントの自動管理を含む）</td><td>組織単位。<code>NEW</code> は組織に参加したアカウント、<code>ALL</code> はすべてのアカウントで自動で有効にする{{r:gdorg}}</td><td>保護プランとエージェントの自動管理を、旧組織と同じ設定にする。エージェントの自動管理は、VPC エンドポイントとセキュリティグループを作り、新しい Fargate タスクにサイドカーを加える{{r:92}}</td></tr>
-<tr><td><b>Config の組織ルール・適合パック</b></td><td>組織に参加したアカウントに展開される{{r:cfgorgdoc}}。除外はアカウント ID で指定する{{r:cfgorg}}</td><td>自動修復を含む適合パック{{r:cfgpacks}}は、移行が終わるまで組織には展開しない</td></tr>
-<tr><td>StackSets の自動デプロイ</td><td>対象の OU に加わったアカウントに展開される{{r:56}}</td><td>Root と Transitional を対象にしない</td></tr>
-<tr><td>Firewall Manager</td><td>OU とアカウントを含める・除外する{{r:57}}</td><td>Root と Transitional を対象にしない</td></tr>
-<tr><td>Systems Manager Quick Setup のパッチポリシー</td><td>組織全体か、選んだアカウント。パッチ適用後の再起動を選べる{{r:qs}}</td><td>Root と Transitional のアカウントを対象にしない</td></tr>
+<tr><td>GuardDuty の自動有効化（エージェントの自動管理を含む）</td><td>組織単位。<code>NEW</code> は組織に参加したアカウント、<code>ALL</code> はすべてのアカウントで自動で有効にする{{r:gdorg}}</td><td>保護プランとエージェントの自動管理を、旧組織と同じ設定にする。エージェントの自動管理は、VPC エンドポイントとセキュリティグループを作り、新しい Fargate タスクにサイドカーを加える{{r:92}}</td></tr>
+<tr><td>Config の組織ルール・適合パック</td><td>組織に参加したアカウントに展開される{{r:cfgorgdoc}}。除外はアカウント ID で指定する{{r:cfgorg}}</td><td>自動修復を含む適合パック{{r:cfgpacks}}は、移行が終わるまで組織には展開しない</td></tr>
 <tr><td>Control Tower の自動登録</td><td>登録済みの OU へ移したとき{{r:91}}</td><td>Transitional は登録しない</td></tr>
 <tr><td>Security Hub・Inspector ポリシー</td><td>付けた OU</td><td>Transitional に付けない。移行元での設定がアカウントに残る{{r:shremove}}</td></tr>
 </table></div>
-<p>ログの収集のように読み取るだけの自動化は、Transitional も対象に含めてよい。</p>
-<ul class="list">
-  <li><b>Config レコーダー：</b>新組織の組織ルールと適合パックの展開は、レコーダーがないと参加から 7 時間しか再試行されない{{r:cfgorgdoc}}。一方、Control Tower への登録では既存のレコーダーと配信チャネルを持たないことが推奨され、残したまま登録する手順も用意されている{{r:28}}。記録の空白を作らないよう後者を優先する（{{U}} 手順の詳細）。削除する場合は、Baseline SCP が削除を拒否するので Transitional にいる間に行う。</li>
-  <li><b>旧組織の撤去：</b>セルフマネージドの StackSets は、IAM ロールの信頼があれば組織と関係なく展開できる{{r:sscon}}。撤去の前に、<code>OrganizationAccountAccessRole</code> やセルフマネージドの StackSets の実行ロールの信頼から旧管理アカウントを外し、旧組織の操作が移行済みのアカウントに及ばないようにする。スタックインスタンスを消すときに <code>--retain-stacks</code> を指定すると、スタックは削除されずに残る{{r:clidsi}}。</li>
-</ul>
+<dl class="notes">
+  <dt>Config レコーダー</dt>
+  <dd>旧組織の Control Tower の登録を外すと、Control Tower が作ったリソースとともに Config レコーダーもなくなる{{r:89}}。一方、新組織の組織ルールと適合パックは、参加から 7 時間以内にレコーダーがないと展開が再試行されない{{r:cfgorgdoc}}。そこで、登録を外したら移す前にアカウントでレコーダーを作る。ただし予防コントロールだけの OU で外した場合は、Control Tower の必須コントロールが Config の設定変更を拒否するので{{r:27}}、新組織に入った直後に Transitional で作る。新組織の Control Tower には、既存の Config リソースを残したまま登録する手順を使う{{r:28}}（{{U}} 手順の詳細）。レコーダーを消してから登録する場合は、配置先では Baseline SCP が削除を拒否するので、Transitional にいる間に消す。</dd>
+  <dt>旧組織の撤去</dt>
+  <dd>セルフマネージドの StackSets は、IAM ロールの信頼があれば組織と関係なく展開できる{{r:sscon}}。撤去の前に、<code>OrganizationAccountAccessRole</code> やセルフマネージドの StackSets の実行ロールの信頼から旧管理アカウントを外し、旧組織の操作が移行済みのアカウントに及ばないようにする。スタックインスタンスを消すときに <code>--retain-stacks</code> を指定すると、スタックは削除されずに残る{{r:clidsi}}。</dd>
+</dl>
 
 <h3 id="c-access">7.7 人のアクセスと Identity Center の URL</h3>
 <p>方式 0 なら、Identity Center のインスタンスをそのまま使うので、URL もサインインも変わらない。方式 A では新組織に新しいインスタンスを作る。既定の URL（<code>d-xxxxxxxxxx.awsapps.com/start</code>）はインスタンスごとに決まるので、必ず変わる{{r:84}}。URL を新しいインスタンスへ引き継ぐ方法は、公式には見当たらない（{{U}} 引き継げないこと）。インスタンスを削除すると、許可セット・アプリ・割り当ては戻せない{{r:85}}。そこで利用者の入口を会社の URL にし、切り替えを転送先の変更だけで済ませる。</p>
@@ -485,7 +513,7 @@
 <h3 id="c-other">7.8 監視・請求・契約</h3>
 <div class="table-wrap"><table class="lbl">
 <tr><th>対象</th><th>移行で起きること</th><th>対処</th></tr>
-<tr><td>組織の CloudTrail</td><td>組織を離れると証跡とサービスリンクロールがアカウントから削除され、それまでのログはバケットに残る。組織に入ると追加され、記録が自動で始まる{{r:ctorg}}</td><td>{{U}} 移行の瞬間に記録が欠けないこと。欠けに備えて一時的なアカウントの証跡を作る場合{{r:54}}は、Baseline SCP が削除を拒否するので Transitional にいる間に消す。残すと重複して課金される{{r:28}}</td></tr>
+<tr><td>組織の CloudTrail</td><td>組織を離れると証跡とサービスリンクロールがアカウントから削除され、それまでのログはバケットに残る。組織に入ると追加され、記録が自動で始まる{{r:ctorg}}</td><td>{{U}} 移行の瞬間に記録が欠けないこと。欠けに備えて一時的な証跡を作るなら{{r:54}}、Transitional にいる間に消す。配置先では Baseline SCP が削除を拒否し、残すと重複して課金される{{r:28}}</td></tr>
 <tr><td>アカウント間の監視とログの集約</td><td>組織 ID で許可していると、移したアカウントのデータが届かなくなりうる。対象は CloudWatch のアカウント間監視{{r:oamapi}}、CloudWatch Logs の宛先{{r:logsdest}}、<code>aws:SourceOrgID</code> で絞ったログ用のバケット{{r:77}}</td><td>新旧の組織 ID を並べる（<a href="#c-cond">7.5</a>）。{{U}} 既存のアカウント間監視のリンクが移行後も続くか</td></tr>
 <tr><td>集約ビュー（Health、Trusted Advisor、Compute Optimizer、S3 Storage Lens など）</td><td>旧組織から外れ、新組織の集約に入る。Network Manager は TGW を登録し直す{{r:54}}</td><td>Network Manager の再登録</td></tr>
 <tr><td>請求</td><td>承諾した時点から、料金は新組織の管理アカウントが払う{{r:67}}。組織レベルの請求の履歴は移行後に削除され、アカウントと OU のタグは作り直しが要る{{r:35}}</td><td>請求データを先にエクスポートする。タグ・コスト配分タグ・予算・税金設定を新組織で設定し直し、サポートプランを新組織の管理アカウントに合わせる{{r:35}}</td></tr>
@@ -512,11 +540,11 @@
 <tr><th>段階</th><th>作業</th><th>完了条件</th></tr>
 <tr><td class="nw">0. 判断</td><td>方式 0 で足りるかを判断する（<a href="#method">6 章</a>）。D0〜D9 を決める</td><td>決定事項が承認されている</td></tr>
 <tr><td class="nw">1. 新組織の基盤</td><td>組織を作る（7 日の待ちが始まる）。アカウント数の上限の引き上げを申請する。Control Tower 4.0、Identity Center、ルートアクセスの一元管理、RAM の組織共有{{r:39}}、アカウント間バックアップを有効にする。会社の URL を入口にする（<a href="#c-access">7.7</a>）</td><td>Log Archive と Audit が動き、SSO でログインできる</td></tr>
-<tr><td class="nw">2. OU とガードレール</td><td>OU を作る。Root には <a href="#g-where">4.1</a> のものだけを付け、ほかの OU には Policy Staging で試したポリシーを付ける。新組織の自動化の対象から Root と Transitional を外す（<a href="#c-auto">7.6</a>）</td><td>テスト用アカウントで、想定どおりに拒否されることを確認した</td></tr>
-<tr><td class="nw">3. 依存の解消</td><td><a href="#change">7 章</a>の対処を、既存の設定に足す形で 1 つずつ適用する</td><td>適用の前後で 8.1 の指標が変わらない</td></tr>
+<tr><td class="nw">2. OU とガードレール</td><td>OU を作る。Root には <a href="#g-where">4.1</a> のものだけを付け、ほかの OU には Policy Staging で試したポリシーを付ける。新組織の自動化を、<a href="#c-auto">7.6</a> のとおり Root と Transitional に効かない設定にする</td><td>テスト用アカウントで、想定どおりに拒否されることを確認した</td></tr>
+<tr><td class="nw">3. 依存の解消</td><td><a href="#change">7 章</a>の対処を 1 つずつ適用する。ほとんどは既存の設定に足す変更。削除を伴う Control Tower の登録の解除は、段階 6 で移す直前に行う</td><td>適用の前後で 8.1 の指標が変わらない</td></tr>
 <tr><td class="nw">4. パイロット</td><td>本番と同じ構成（ハブ、Resolver ルール、Profiles、VPC 共有、StackSets、Firewall Manager、Control Tower、Identity Center の連携アプリ）を別の 2 つの組織で再現し、利用者 → 所有者の順に移す{{r:44}}</td><td>8.1 の計測で影響ゼロ。{{U}} の項目をすべて確認した</td></tr>
 <tr><td class="nw">5. カナリア</td><td>依存の最も少ない本番アカウントを 1 つ移す</td><td>手順と監視が本番で機能した</td></tr>
-<tr><td class="nw">6. ウェーブ</td><td>依存の少ない順に、利用者のアカウントから移す。ウェーブごとに観察期間を置く。移したアカウントは <a href="#g-check">4.6</a> の確認を済ませてから配置先の OU へ移す</td><td>各ウェーブで影響ゼロ</td></tr>
+<tr><td class="nw">6. ウェーブ</td><td>依存の少ない順に、利用者のアカウントから移す。移す直前に旧組織の Control Tower の登録を外す（<a href="#c-blockers">7.2</a>）。ウェーブごとに観察期間を置く。移したアカウントは <a href="#g-check">4.6</a> の確認を済ませてから配置先の OU へ移す</td><td>各ウェーブで影響ゼロ</td></tr>
 <tr><td class="nw">7. ハブ</td><td>Network アカウントを最後に移し{{r:52}}、正式な共有に切り替えてから、ブリッジ共有を外す（<a href="#c-share">7.3</a>）</td><td>すべての関連付けが正式な共有で <code>ASSOCIATED</code></td></tr>
 <tr><td class="nw">8. 撤去</td><td>旧 ID を条件から外す。旧組織から届く経路を断ってから、旧組織の自動化・委任管理者・Identity Center を撤去し、旧組織を削除する（<a href="#c-auto">7.6</a>）。旧管理アカウントを移す（方式 C）</td><td>旧 ID への参照が残っていない</td></tr>
 <tr><td class="nw">9. 統制の強化</td><td>IMDSv2・許可 AMI・タグの強制を段階的に進める</td><td>準拠率が目標に達した</td></tr>
@@ -536,13 +564,18 @@
 </ul>
 
 <h3 id="p-cutover">8.4 移行当日：監視・中止・復旧</h3>
-<ul class="list">
-  <li><b>監視：</b>8.1 の計測に加え、RAM の共有の状態変化（EventBridge）と <code>DisassociateResourceShare</code>（CloudTrail）を通知する{{r:44}}。</li>
-  <li><b>中止基準：</b>疎通か名前解決の失敗が 1 回でも出た、AccessDenied が基準値を超えた、ENI の作成エラーが出た、ELB の 5xx が増えた。1 つでも当てはまれば、次のアカウントへ進まない。</li>
-  <li><b>復旧は前進修正を基本にする：</b>移行後の問題の多くは、足りない許可や共有を足せば直る（条件への組織 ID の追加、共有の追加、割り当ての作成）。種類ごとに、直す手順とコードを事前に用意しておく。</li>
-  <li><b>旧組織へ戻すのは最後の手段：</b>戻すこと自体がもう一度の移行で、旧 Identity Center の割り当ての作り直しや、旧組織の自動化の再適用が起きる。新組織の Root-Guard が招待の承諾を拒否するので、対象アカウントを一時的に除外する必要もある（<a href="#g-scp">4.3</a>）。手順をパイロットで確認した場合だけ選択肢にする（{{U}} 戻せるようになるまでの待ち時間）。旧組織の設定（共有、条件、SCP）は、すべての移行が終わるまで変えない。</li>
-  <li><b>体制：</b>ウェーブの時間帯は変更を凍結し、ネットワーク・アプリ・セキュリティの担当が立ち会う。計画は AWS のアカウントチームと共有する。事例でも、AWS のサービスチームと連携して問題に対処している{{r:44}}。</li>
-</ul>
+<dl class="notes">
+  <dt>監視</dt>
+  <dd>8.1 の計測に加え、RAM の共有の状態変化（EventBridge）と <code>DisassociateResourceShare</code>（CloudTrail）を通知する{{r:44}}。</dd>
+  <dt>中止基準</dt>
+  <dd>疎通か名前解決の失敗が 1 回でも出た、AccessDenied が基準値を超えた、ENI の作成エラーが出た、ELB の 5xx が増えた。1 つでも当てはまれば、次のアカウントへ進まない。</dd>
+  <dt>復旧</dt>
+  <dd>前進修正を基本にする。移行後の問題の多くは、足りない許可や共有を足せば直る（条件への組織 ID の追加、共有の追加、割り当ての作成）。種類ごとに、直す手順とコードを事前に用意しておく。</dd>
+  <dt>切り戻し</dt>
+  <dd>旧組織へ戻すのは最後の手段。戻すこと自体がもう一度の移行で、旧 Identity Center の割り当ての作り直しや、旧組織の自動化の再適用が起きる。新組織の Root-Guard が招待の承諾を拒否するので、対象アカウントを一時的に除外する必要もある（<a href="#g-scp">4.3</a>）。手順をパイロットで確認した場合だけ選択肢にする（{{U}} 戻せるようになるまでの待ち時間）。旧組織の設定（共有、条件、SCP）は、すべての移行が終わるまで変えない。</dd>
+  <dt>体制</dt>
+  <dd>ウェーブの時間帯は変更を凍結し、ネットワーク・アプリ・セキュリティの担当が立ち会う。計画は AWS のアカウントチームと共有する。事例でも、AWS のサービスチームと連携して問題に対処している{{r:44}}。</dd>
+</dl>
 
 <h3 id="p-limits">8.5 影響ゼロを保証できないもの</h3>
 <p>次に当たるシステムは、パイロットで影響ゼロを確認できない限り、方式 A では移さない。方式 B（新しいアカウントに並行して作り、DNS の重み付けなどで利用者の流れを段階的に移す。旧環境は戻し先として残す）で移す。</p>
@@ -570,11 +603,17 @@
 
 <!-- 10 -->
 <h2 id="ops">10. 運用と定着</h2>
-<ul class="list">
-  <li><b>ポリシーはコードで管理する：</b>SCP・RCP・宣言型ポリシーを Git で管理し、セキュリティ担当と CCoE の 2 名で承認する。適用はパイプラインからだけ行う。</li>
-  <li><b>変更は段階的に広げる：</b>Policy Staging の子 OU → 対象 OU の 1 アカウント → 対象 OU の順に広げる{{r:22}}。SCP を絞るときは、IAM の「サービスの最終アクセス」を根拠にする。Organizations の単位でも確認できる{{r:3}}。</li>
-  <li><b>例外：</b>Exceptions OU への移動で表し、期限と責任者を台帳に記録して、四半期ごとに見直す。</li>
-  <li><b>利用者への説明：</b>EC2 ポリシーのエラーメッセージに社内 Wiki の URL を入れる{{r:9}}。ガードレールの一覧と例外の申請手順を公開する。移行の前に、会社の URL、新旧ポータルの使い分け、AWS CLI の設定の変え方を周知する。</li>
-  <li><b>役割分担：</b>CCoE は OU とポリシー、セキュリティは RCP・検知・例外の承認、ネットワークはハブと共有の移行、アプリの担当は棚卸しとウェーブの立ち会いを受け持つ。</li>
-  <li><b>指標：</b>配置先の OU にいるアカウントの割合、有効な例外の数、ガードレールによる AccessDenied の件数、アカウントの払い出しにかかる日数。</li>
-</ul>
+<dl class="notes">
+  <dt>ポリシーの管理</dt>
+  <dd>SCP・RCP・宣言型ポリシーを Git で管理し、セキュリティ担当と CCoE の 2 名で承認する。適用はパイプラインからだけ行う。</dd>
+  <dt>変更の広げ方</dt>
+  <dd>Policy Staging の子 OU → 対象 OU の 1 アカウント → 対象 OU の順に広げる{{r:22}}。SCP を絞るときは、IAM の「サービスの最終アクセス」を根拠にする。Organizations の単位でも確認できる{{r:3}}。</dd>
+  <dt>例外</dt>
+  <dd>Exceptions OU への移動で表し、期限と責任者を台帳に記録して、四半期ごとに見直す。</dd>
+  <dt>利用者への説明</dt>
+  <dd>EC2 ポリシーのエラーメッセージに社内 Wiki の URL を入れる{{r:9}}。ガードレールの一覧と例外の申請手順を公開する。移行の前に、会社の URL、新旧ポータルの使い分け、AWS CLI の設定の変え方を周知する。</dd>
+  <dt>役割分担</dt>
+  <dd>CCoE は OU とポリシー、セキュリティは RCP・検知・例外の承認、ネットワークはハブと共有の移行、アプリの担当は棚卸しとウェーブの立ち会いを受け持つ。</dd>
+  <dt>指標</dt>
+  <dd>配置先の OU にいるアカウントの割合、有効な例外の数、ガードレールによる AccessDenied の件数、アカウントの払い出しにかかる日数。</dd>
+</dl>

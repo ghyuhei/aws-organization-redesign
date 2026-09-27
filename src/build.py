@@ -125,6 +125,9 @@ figure.diagram .canvas a{display:block}
 figure.diagram img{display:block;max-width:100%;min-width:760px;height:auto;margin:0 auto}
 figure.diagram figcaption{font-size:.86rem;color:var(--muted);margin:8px auto 0;max-width:1088px}
 ol.steps>li,ul.list>li{margin:7px 0}
+dl.notes{margin:12px 0}
+dl.notes dt{font-weight:700;margin-top:14px}
+dl.notes dd{margin:2px 0 0}
 .src{font-size:.82rem;list-style:none;padding-left:0}
 .src li{margin:3px 0;overflow-wrap:anywhere;padding-left:3.6em;text-indent:-3.6em}
 .src .no{display:inline-block;min-width:3.4em;color:var(--muted)}
@@ -150,7 +153,7 @@ doc = f"""<!doctype html>
 
 <!-- 11 -->
 <h2 id="sources">11. 出典</h2>
-<h3>公式ドキュメント</h3>
+<h3>公式ドキュメント（ユーザーガイド、API リファレンス、FAQ、What's New）</h3>
 <ul class="src">
 {items('doc', 's', '')}
 </ul>
