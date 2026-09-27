@@ -1,0 +1,514 @@
+{
+ "63": [
+  "AWS Organizations FAQs",
+  "https://aws.amazon.com/organizations/faqs/"
+ ],
+ "36": [
+  "Direct account transfers（2025-11）",
+  "https://aws.amazon.com/about-aws/whats-new/2025/11/aws-organizations-direct-account-transfers/"
+ ],
+ "35": [
+  "Migrate an account to another organization",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_account_migration.html"
+ ],
+ "2": [
+  "Declarative policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_declarative_policies.html"
+ ],
+ "ctxfer": [
+  "AWS Control Tower: Transfer an account to a different organization",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/account-transfer.html"
+ ],
+ "39": [
+  "AWS RAM: sharing your resources（RetainSharingOnAccountLeaveOrganization）",
+  "https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html"
+ ],
+ "40": [
+  "AWS RAM maintains shares when accounts change organizations（2026-02）",
+  "https://aws.amazon.com/about-aws/whats-new/2026/02/aws-resource-access-manager/"
+ ],
+ "41": [
+  "Shareable AWS resources",
+  "https://docs.aws.amazon.com/ram/latest/userguide/shareable.html"
+ ],
+ "32": [
+  "IAM Identity Center: manage your identity source",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source.html"
+ ],
+ "25": [
+  "How AWS Regions work with Control Tower",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/region-how.html"
+ ],
+ "ctouregion": [
+  "AWS Control Tower: Region deny control applied to the OU（CT.MULTISERVICE.PV.1）",
+  "https://docs.aws.amazon.com/controltower/latest/controlreference/ou-region-deny.html"
+ ],
+ "26": [
+  "Nested OUs in Control Tower",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/nested-ous.html"
+ ],
+ "aa": [
+  "Using IAM Access Analyzer（外部アクセスの検出）",
+  "https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html"
+ ],
+ "bg": [
+  "Organizing Your AWS Environment: Design principles（Break glass access）",
+  "https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/design-principles-for-your-multi-account-strategy.html"
+ ],
+ "emerg": [
+  "IAM Identity Center: Set up emergency access to the AWS Management Console",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/emergency-access.html"
+ ],
+ "21": [
+  "Recommended OUs and accounts",
+  "https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/recommended-ous-and-accounts.html"
+ ],
+ "23": [
+  "Control Tower landing zone 4.0 key changes",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/key-changes-lz-v4.html"
+ ],
+ "shremove": [
+  "Security Hub CSPM: Effect of account actions on data（組織から外れたメンバー）",
+  "https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-data-retention.html"
+ ],
+ "3": [
+  "Service control policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html"
+ ],
+ "5": [
+  "Resource control policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html"
+ ],
+ "12": [
+  "AI services opt-out policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html"
+ ],
+ "orgremove": [
+  "Removing a member account from an organization（Considerations）",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_remove.html"
+ ],
+ "24": [
+  "Control Tower Region deny",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/region-deny.html"
+ ],
+ "1": [
+  "Managing organization policies（ポリシーの種類と上限）",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies.html"
+ ],
+ "4": [
+  "SCP の IAM 言語フルサポート（2025-09）",
+  "https://aws.amazon.com/about-aws/whats-new/2025/09/aws-organizations-iam-language-service-control-policies/"
+ ],
+ "11": [
+  "Amazon S3 policy syntax",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3_syntax.html"
+ ],
+ "19": [
+  "Security Hub policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_security_hub.html"
+ ],
+ "64": [
+  "AWS Security Hub FAQs",
+  "https://aws.amazon.com/security-hub/faqs/"
+ ],
+ "18": [
+  "Amazon Bedrock policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_bedrock.html"
+ ],
+ "16": [
+  "Amazon Q Developer in chat applications organization policies",
+  "https://docs.aws.amazon.com/chatbot/latest/adminguide/chatbot-orgs-policy.html"
+ ],
+ "17": [
+  "RDS upgrade rollout policy",
+  "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/RDS.Maintenance.AMVU.UpgradeRollout.html"
+ ],
+ "20": [
+  "AWS Shield Network Security Director policies",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_network_security_director.html"
+ ],
+ "33": [
+  "Quotas for AWS Organizations",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_reference_limits.html"
+ ],
+ "scpeval": [
+  "SCP evaluation",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_evaluation.html"
+ ],
+ "acceptinv": [
+  "Accepting or declining an invitation（Minimum permissions）",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_accept-decline-invite.html"
+ ],
+ "27": [
+  "Control Tower mandatory controls",
+  "https://docs.aws.amazon.com/controltower/latest/controlreference/mandatory-controls.html"
+ ],
+ "77": [
+  "AWS global condition context keys（aws:AssumedRoot）",
+  "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html"
+ ],
+ "66": [
+  "Service Authorization Reference: AWS Security Hub",
+  "https://docs.aws.amazon.com/service-authorization/latest/reference/list_securityhub.html"
+ ],
+ "8": [
+  "EC2 policy syntax and examples",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2_syntax.html"
+ ],
+ "80": [
+  "Security Hub CSPM controls for Amazon EC2（EC2.7）",
+  "https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html"
+ ],
+ "ebsdef": [
+  "Amazon EBS: Enable encryption by default",
+  "https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html"
+ ],
+ "amishare": [
+  "Share an AMI with specific AWS accounts（既定のキーで暗号化した AMI は共有不可）",
+  "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html"
+ ],
+ "6": [
+  "RCP syntax",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps_syntax.html"
+ ],
+ "75": [
+  "Control access to AWS STS with VPC endpoint policies（フェデレーションと aws:PrincipalOrgID）",
+  "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sts_vpc_endpoint_policies.html"
+ ],
+ "83": [
+  "EKS Best Practices: Identity and Access Management（IRSA）",
+  "https://docs.aws.amazon.com/eks/latest/best-practices/identity-and-access-management.html"
+ ],
+ "82": [
+  "AWS CLI: sts assume-role-with-saml",
+  "https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role-with-saml.html"
+ ],
+ "55": [
+  "Conditions with multiple context keys or values",
+  "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-logic-multiple-context-keys-or-values.html"
+ ],
+ "elb": [
+  "Enable access logs for your Application Load Balancer（旧形式のバケットポリシー）",
+  "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html"
+ ],
+ "s3web": [
+  "Amazon S3 endpoints and quotas（ウェブサイトエンドポイントは HTTPS 非対応）",
+  "https://docs.aws.amazon.com/general/latest/gr/s3.html"
+ ],
+ "10": [
+  "Order of precedence for instance metadata options",
+  "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html"
+ ],
+ "bpa": [
+  "Block public access to VPCs and subnets",
+  "https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html"
+ ],
+ "amis": [
+  "Control the discovery and use of AMIs with Allowed AMIs",
+  "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-allowed-amis.html"
+ ],
+ "9": [
+  "EC2 policies（カスタムエラーメッセージ）",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2.html"
+ ],
+ "13": [
+  "AI services opt-out policy syntax",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out_syntax.html"
+ ],
+ "tagenf": [
+  "Tag policies: Enforce tagging consistency",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_tag-policies-enforcement.html"
+ ],
+ "crisgeo": [
+  "Amazon Bedrock: Geographic cross-Region inference（SCP の要件）",
+  "https://docs.aws.amazon.com/bedrock/latest/userguide/geographic-cross-region-inference.html"
+ ],
+ "crisglobal": [
+  "Amazon Bedrock: Global cross-Region inference（SCP の要件）",
+  "https://docs.aws.amazon.com/bedrock/latest/userguide/global-cross-region-inference.html"
+ ],
+ "ctdata": [
+  "CloudTrail: Logging data events",
+  "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html"
+ ],
+ "ses": [
+  "Obtaining Amazon SES SMTP credentials",
+  "https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html"
+ ],
+ "credrep": [
+  "Generate credential reports for your AWS account",
+  "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html"
+ ],
+ "imds2": [
+  "Transition to using Instance Metadata Service Version 2（MetadataNoToken）",
+  "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-metadata-transition-to-version-2.html"
+ ],
+ "69": [
+  "AWS Backup: Creating backup copies across AWS accounts",
+  "https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html"
+ ],
+ "30": [
+  "Centrally manage root access for member accounts",
+  "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html"
+ ],
+ "assumeroot": [
+  "AWS STS API Reference: AssumeRoot",
+  "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html"
+ ],
+ "team": [
+  "Temporary elevated access management with IAM Identity Center",
+  "https://aws.amazon.com/blogs/security/temporary-elevated-access-management-with-iam-identity-center/"
+ ],
+ "79": [
+  "Update the alternate contacts for your AWS account",
+  "https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact-alternate.html"
+ ],
+ "84": [
+  "Customizing the AWS access portal URL",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/howtochangeURL.html"
+ ],
+ "89": [
+  "Control Tower: Unenroll an account",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/unmanage-account.html"
+ ],
+ "91": [
+  "Control Tower: Move and enroll accounts with auto-enrollment",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/account-auto-enrollment.html"
+ ],
+ "93": [
+  "Standard migration process to enable all features with Organizations",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/manage-begin-all-features-standard-migration.html"
+ ],
+ "cliram": [
+  "AWS CLI: ram get-resource-shares",
+  "https://docs.aws.amazon.com/cli/latest/reference/ram/get-resource-shares.html"
+ ],
+ "43": [
+  "What is AWS RAM（料金）",
+  "https://docs.aws.amazon.com/ram/latest/userguide/what-is.html"
+ ],
+ "cliorgsvc": [
+  "AWS CLI: organizations list-aws-service-access-for-organization",
+  "https://docs.aws.amazon.com/cli/latest/reference/organizations/list-aws-service-access-for-organization.html"
+ ],
+ "cliorgda": [
+  "AWS CLI: organizations list-delegated-administrators",
+  "https://docs.aws.amazon.com/cli/latest/reference/organizations/list-delegated-administrators.html"
+ ],
+ "51": [
+  "Migrating accounts between AWS Organizations from a network perspective（2022-07）",
+  "https://aws.amazon.com/blogs/networking-and-content-delivery/migrating-accounts-between-aws-organizations-from-a-network-perspective/"
+ ],
+ "54": [
+  "Moving an organization member account to another organization: Part 3（信頼されたアクセスのサービス）",
+  "https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-3/"
+ ],
+ "38": [
+  "Finding the seller of record",
+  "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/finding-the-seller-of-record.html"
+ ],
+ "90": [
+  "Control Tower: About enrolling existing accounts（VPC の扱い）",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/enroll-account.html"
+ ],
+ "67": [
+  "Managing account invitations with AWS Organizations",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_invites.html"
+ ],
+ "37": [
+  "How do I move an account to another organization?（re:Post）",
+  "https://repost.aws/knowledge-center/organizations-move-accounts"
+ ],
+ "fmsadmin": [
+  "Firewall Manager: Changing the default administrator account",
+  "https://docs.aws.amazon.com/waf/latest/developerguide/fms-change-administrator.html"
+ ],
+ "53": [
+  "Moving an organization member account to another organization: Part 2（委任管理者）",
+  "https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-2/"
+ ],
+ "detective": [
+  "Amazon Detective: Removing the Detective administrator account",
+  "https://docs.aws.amazon.com/detective/latest/userguide/accounts-remove-admin-overview.html"
+ ],
+ "explorer": [
+  "Systems Manager: Deregister an Explorer delegated administrator",
+  "https://docs.aws.amazon.com/systems-manager/latest/userguide/Explorer-setup-delegated-administrator-deregister.html"
+ ],
+ "42": [
+  "Example SCPs for AWS RAM",
+  "https://docs.aws.amazon.com/ram/latest/userguide/security-scp.html"
+ ],
+ "44": [
+  "How a global payment processor preserved AWS RAM shares during an Organizations migration",
+  "https://aws.amazon.com/blogs/architecture/how-a-global-payment-processor-preserved-aws-ram-shares-and-lake-formation-permissions-during-an-aws-organizations-migration/"
+ ],
+ "46": [
+  "Work with AWS Transit Gateway（共有の解除）",
+  "https://docs.aws.amazon.com/vpc/latest/tgw/working-with-transit-gateways.html"
+ ],
+ "47": [
+  "Amazon Route 53 FAQs（Resolver ルールの共有停止）",
+  "https://aws.amazon.com/route53/faqs/"
+ ],
+ "48": [
+  "Working with shared Route 53 Profiles",
+  "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/sharing-profiles.html"
+ ],
+ "76": [
+  "AWS CLI: disassociate-resolver-query-log-config",
+  "https://docs.aws.amazon.com/cli/latest/reference/route53resolver/disassociate-resolver-query-log-config.html"
+ ],
+ "45": [
+  "Transfer accounts while preserving Lake Formation permissions",
+  "https://aws.amazon.com/blogs/mt/transfer-aws-accounts-between-aws-organizations-while-preserving-aws-lake-formation-permissions/"
+ ],
+ "49": [
+  "Working with shared subnets",
+  "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-sharing-share-subnet-working-with.html"
+ ],
+ "50": [
+  "Share security groups with AWS Organizations",
+  "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-sharing.html"
+ ],
+ "52": [
+  "Moving an organization member account to another organization: Part 1",
+  "https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-1/"
+ ],
+ "59": [
+  "Manage AMI sharing with an organization or OU",
+  "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/share-amis-org-ou-manage.html"
+ ],
+ "72": [
+  "Lambda AddLayerVersionPermission",
+  "https://docs.aws.amazon.com/lambda/latest/api/API_AddLayerVersionPermission.html"
+ ],
+ "scapi": [
+  "AWS Service Catalog API Reference: EnableAWSOrganizationsAccess",
+  "https://docs.aws.amazon.com/servicecatalog/latest/dg/API_EnableAWSOrganizationsAccess.html"
+ ],
+ "74": [
+  "AWS Backup: Creating backup copies across AWS Regions",
+  "https://docs.aws.amazon.com/aws-backup/latest/devguide/cross-region-backup.html"
+ ],
+ "ritoff": [
+  "Reserved Instances and Savings Plans discount sharing",
+  "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/ri-turn-off.html"
+ ],
+ "logsdest": [
+  "CloudWatch Logs API Reference: PutDestinationPolicy",
+  "https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDestinationPolicy.html"
+ ],
+ "oamapi": [
+  "CloudWatch Observability Access Manager API Reference: PutSinkPolicy",
+  "https://docs.aws.amazon.com/OAM/latest/APIReference/API_PutSinkPolicy.html"
+ ],
+ "71": [
+  "Referencing permission sets in resource policies, EKS config maps, and KMS key policies",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/referencingpermissionsets.html"
+ ],
+ "68": [
+  "Creating OrganizationAccountAccessRole for an invited account",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_create-cross-account-role.html"
+ ],
+ "56": [
+  "StackSets AutoDeployment（RetainStacksOnAccountRemoval）",
+  "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudformation-stackset-autodeployment.html"
+ ],
+ "stimport": [
+  "Import stacks into CloudFormation StackSets",
+  "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-import.html"
+ ],
+ "57": [
+  "Firewall Manager policy（ResourcesCleanUp）",
+  "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-fms-policy.html"
+ ],
+ "cfgorgdoc": [
+  "AWS Config: Managing conformance packs across all accounts in your organization（Considerations）",
+  "https://docs.aws.amazon.com/config/latest/developerguide/conformance-pack-organization-apis.html"
+ ],
+ "gddisassoc": [
+  "GuardDuty: Disassociating (removing) member account from administrator account",
+  "https://docs.aws.amazon.com/guardduty/latest/ug/disassociate-remove-member-account-from-admin.html"
+ ],
+ "ssoint": [
+  "AWS Organizations: IAM Identity Center and AWS Organizations",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/services-that-can-integrate-sso.html"
+ ],
+ "gdorg": [
+  "GuardDuty API Reference: UpdateOrganizationConfiguration",
+  "https://docs.aws.amazon.com/guardduty/latest/APIReference/API_UpdateOrganizationConfiguration.html"
+ ],
+ "92": [
+  "GuardDuty: How Runtime Monitoring works with Fargate",
+  "https://docs.aws.amazon.com/guardduty/latest/ug/how-runtime-monitoring-works-ecs-fargate.html"
+ ],
+ "cfgorg": [
+  "AWS Config API Reference: PutOrganizationConfigRule（ExcludedAccounts）",
+  "https://docs.aws.amazon.com/config/latest/APIReference/API_PutOrganizationConfigRule.html"
+ ],
+ "cfgpacks": [
+  "AWS Config: Conformance packs（ルールと修復アクションの集合）",
+  "https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html"
+ ],
+ "qs": [
+  "Configure patching for instances in an organization using a Quick Setup patch policy",
+  "https://docs.aws.amazon.com/systems-manager/latest/userguide/quick-setup-patch-manager.html"
+ ],
+ "28": [
+  "Control Tower enrollment prerequisites",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/enrollment-prerequisites.html"
+ ],
+ "sscon": [
+  "CloudFormation StackSets concepts（Permission models）",
+  "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html"
+ ],
+ "clidsi": [
+  "AWS CLI: cloudformation delete-stack-instances（--retain-stacks）",
+  "https://docs.aws.amazon.com/cli/latest/reference/cloudformation/delete-stack-instances.html"
+ ],
+ "85": [
+  "Delete your IAM Identity Center instance",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/delete-config.html"
+ ],
+ "86": [
+  "Configuring IAM Identity Center authentication with the AWS CLI（vanity URL）",
+  "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html"
+ ],
+ "88": [
+  "Configure SAML and SCIM with Microsoft Entra ID and IAM Identity Center",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/idp-microsoft-entra.html"
+ ],
+ "ssoacct": [
+  "IAM Identity Center: Manage access to AWS accounts",
+  "https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-accounts.html"
+ ],
+ "87": [
+  "How to use multiple instances of AWS IAM Identity Center",
+  "https://aws.amazon.com/blogs/security/how-to-use-multiple-instances-of-aws-iam-identity-center/"
+ ],
+ "94": [
+  "How do I resolve login issues with Quick Suite?（re:Post）",
+  "https://repost.aws/knowledge-center/quicksight-resolve-login-issues"
+ ],
+ "ctorg": [
+  "CloudTrail: Creating a trail for an organization",
+  "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/creating-trail-organization.html"
+ ],
+ "34": [
+  "Billing and pricing for AWS Organizations",
+  "https://docs.aws.amazon.com/organizations/latest/userguide/pricing.html"
+ ],
+ "29": [
+  "Control Tower pricing",
+  "https://docs.aws.amazon.com/controltower/latest/userguide/pricing.html"
+ ],
+ "vpcenc": [
+  "AWS announces pricing for VPC Encryption Controls（2026-03）",
+  "https://aws.amazon.com/about-aws/whats-new/2026/03/vpc-encryption-controls-pricing/"
+ ],
+ "22": [
+  "Procedural OUs（Policy Staging）",
+  "https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/procedural-ous.html"
+ ]
+}

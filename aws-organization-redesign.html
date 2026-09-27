@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Organization 再設計</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --surface-2:#f0f0ec; --text:#1d1d1b; --muted:#5d5d58;
+  --line:#dcdcd6; --accent:#1f5fa8; --accent-soft:#e6eef8;
+  --ok:#1d7a46; --ok-soft:#e5f3eb; --warn:#9a5b00; --warn-soft:#fbf0dc; --bad:#a8322b; --bad-soft:#f8e6e4;
+  --code-bg:#f3f3ef;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161615; --surface:#1f1f1d; --surface-2:#272725; --text:#ebebe6; --muted:#a3a39c;
+    --line:#3a3a37; --accent:#7fb0ea; --accent-soft:#1d2a3a;
+    --ok:#6cc893; --ok-soft:#18291f; --warn:#e3a94d; --warn-soft:#2e2414; --bad:#ec8a82; --bad-soft:#321b19;
+    --code-bg:#232321;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161615; --surface:#1f1f1d; --surface-2:#272725; --text:#ebebe6; --muted:#a3a39c;
+  --line:#3a3a37; --accent:#7fb0ea; --accent-soft:#1d2a3a;
+  --ok:#6cc893; --ok-soft:#18291f; --warn:#e3a94d; --warn-soft:#2e2414; --bad:#ec8a82; --bad-soft:#321b19;
+  --code-bg:#232321;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;line-height:1.75;font-size:15.5px}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 80px}
+header.hero{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+.hero h1{font-size:1.9rem;margin:0 0 6px}
+.hero p{margin:4px 0;color:var(--muted)}
+.meta{font-size:.85rem}
+p.meta{color:var(--muted)}
+nav.toc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:32px}
+nav.toc ol{margin:0;padding-left:1.3em;columns:2;column-gap:32px}
+nav.toc a{color:var(--accent);text-decoration:none}
+nav.toc a:hover{text-decoration:underline}
+h2{font-size:1.4rem;margin:52px 0 12px;padding-top:8px;border-top:2px solid var(--text)}
+h3{font-size:1.1rem;margin:30px 0 8px}
+h4{font-size:1rem;margin:22px 0 6px}
+p{margin:8px 0}
+a{color:var(--accent)}
+.table-wrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:var(--surface-2);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.nw{white-space:nowrap}
+table.kv td:first-child{white-space:nowrap}
+table.lbl td:first-child{min-width:11em}
+code{font-family:"Cascadia Code",Consolas,"SFMono-Regular",monospace;font-size:.85em;background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:.8rem;line-height:1.5}
+pre code{background:none;padding:0;overflow-wrap:normal}
+.tag{display:inline-block;font-size:.75rem;font-weight:600;padding:1px 8px;border-radius:99px;white-space:nowrap}
+.t-must{background:var(--bad-soft);color:var(--bad)}
+.t-rec{background:var(--ok-soft);color:var(--ok)}
+.ok-mark{color:var(--ok);font-weight:700;white-space:nowrap}
+.ng-mark{color:var(--bad);font-weight:700;white-space:nowrap}
+.unv{font-family:"Cascadia Code",Consolas,monospace;font-size:.78em;font-weight:700;color:var(--warn);background:var(--warn-soft);padding:0 5px;border-radius:4px;white-space:nowrap}
+a.ref{font-size:.72em;vertical-align:super;text-decoration:none;margin-left:1px;white-space:nowrap}
+a.ref.b{color:var(--muted)}
+figure.diagram{margin:16px 0 20px;width:min(1780px,calc(100vw - 48px));position:relative;left:50%;transform:translateX(-50%)}
+figure.diagram .canvas{background:#ffffff;border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto}
+figure.diagram .canvas a{display:block}
+figure.diagram img{display:block;max-width:100%;min-width:760px;height:auto;margin:0 auto}
+figure.diagram figcaption{font-size:.86rem;color:var(--muted);margin:8px auto 0;max-width:1088px}
+ol.steps>li,ul.list>li{margin:7px 0}
+.src{font-size:.82rem;list-style:none;padding-left:0}
+.src li{margin:3px 0;overflow-wrap:anywhere;padding-left:3.6em;text-indent:-3.6em}
+.src .no{display:inline-block;min-width:3.4em;color:var(--muted)}
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+@media (max-width:720px){nav.toc ol{columns:1}.hero h1{font-size:1.5rem}}
+@media print{nav.toc{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>AWS Organization 再設計ガイド</h1>
+  <p>新しい組織の OU・ポリシー設計と、既存のアカウントを止めずに移す手順</p>
+  <p class="meta">2026-09-27 時点の情報。[n] は AWS の公式ドキュメント（ユーザーガイド、API リファレンス、FAQ、What's New）、[Bn] は AWS のブログと re:Post。[Bn] だけを根拠にした記述は、公式ドキュメントでの明示を確認できていない。<span class="unv">unverified:</span> はどちらにも明示がない事項で、パイロットで確認する。</p>
+</header>
+
+<nav class="toc" aria-label="目次">
+<ol>
+  <li><a href="#summary">要点</a></li>
+  <li><a href="#premise">前提と決めること</a></li>
+  <li><a href="#target">OU とアカウント</a></li>
+  <li><a href="#guardrails">ガードレール</a></li>
+  <li><a href="#identity">ID・ルート・ログ・検知</a></li>
+  <li><a href="#method">移行方式の選択</a></li>
+  <li><a href="#change">移行で変わるものと対処</a></li>
+  <li><a href="#plan">移行の進め方</a></li>
+  <li><a href="#cost">コスト</a></li>
+  <li><a href="#ops">運用と定着</a></li>
+  <li><a href="#sources">出典</a></li>
+</ol>
+</nav>
+
+<!-- 1 -->
+<h2 id="summary">1. 要点</h2>
+<ol class="steps">
+  <li><b>新しい組織が必要かを最初に判断する。</b>必要なのは管理アカウント（支払元）を変える場合だけで、既存組織の管理アカウントは変更できない<a class="ref" href="#s1">[1]</a>。それ以外は既存組織の中で作り直す（方式 0）。組織を移さないので、Identity Center の URL も RAM の共有も変わらない。</li>
+  <li><b>OU は AWS ホワイトペーパーの推奨に沿って作り、Control Tower（ランディングゾーン 4.0）で統制する。</b>業務を止めうる統制は、<a href="#g-check">4.6</a> の確認を済ませたアカウントにだけ効かせる。</li>
+  <li><b>新組織へは「アカウントの直接移行」で移す</b><a class="ref" href="#s2">[2]</a>。移したアカウントは Root 直下に入り、その時点で新組織のポリシーが効く<a class="ref" href="#s3">[3]</a><a class="ref" href="#s4">[4]</a>。そのため Root には、移ってきたアカウントの動作を変えないポリシーだけを付ける。旧組織の Control Tower に登録しているアカウントは、移す前に登録を外す必要がある<a class="ref" href="#s5">[5]</a>。</li>
+  <li><b>システムが止まる原因は 3 つに分かれる。</b>共有が外れる（Resolver ルール、VPC 共有など）、権限の条件が合わなくなる（組織 ID など）、組織の自動化が設定を変える（StackSets、Firewall Manager、Control Tower など）。<a href="#change">7 章</a>の方法で全件を洗い出し、移行の前に打ち消す。</li>
+  <li><b>RAM で共有している TGW・Resolver ルールなどは、組織が変わっても外れない「ブリッジ共有」を先に作って移る。</b>2026-02 に提供が始まった設定を使う<a class="ref" href="#s6">[6]</a><a class="ref" href="#s7">[7]</a>。VPC 共有は組織内でしか使えないので<a class="ref" href="#s8">[8]</a>、移行前に依存をなくす。</li>
+  <li><b>新組織では Identity Center の URL が必ず変わる。</b>会社のドメインの URL を先に入口にして、ブックマークを守る。</li>
+  <li><b>影響がないことは計測で確認する。</b>本番と同じく組織の境界をまたぐパイロットで <span class="unv">unverified:</span> の項目をすべて確認してから、本番に進む。</li>
+</ol>
+
+<!-- 2 -->
+<h2 id="premise">2. 前提と決めること</h2>
+<div class="table-wrap"><table class="kv">
+<tr><th>項目</th><th>前提</th><th>前提が違う場合</th></tr>
+<tr><td>統制基盤</td><td>Control Tower（ランディングゾーン 4.0）と IaC</td><td>Control Tower を使わないなら、CloudTrail・Config・リージョン制限を自前で作る</td></tr>
+<tr><td>ID 基盤</td><td>Identity Center の組織インスタンスと外部 IdP。ID ソースは組織に 1 つ<a class="ref" href="#s9">[9]</a></td><td>IdP が複数あるなら別に設計する</td></tr>
+<tr><td>リージョン</td><td>ホームは東京、DR は大阪。どちらも Control Tower の対応リージョン<a class="ref" href="#s10">[10]</a></td><td>海外拠点があれば、OU ごとに許可リージョンを分ける</td></tr>
+<tr><td>既存環境</td><td>旧組織があり、ネットワークハブ（TGW・Resolver）を RAM で各アカウントに共有している</td><td>完全な新規構築なら 6〜8 章は不要</td></tr>
+</table></div>
+
+<div class="table-wrap"><table>
+<tr><th>#</th><th>決めること</th><th>推奨</th></tr>
+<tr><td>D0</td><td>新しい組織が必要か</td><td>管理アカウントを変える場合だけ新組織を作る。それ以外は方式 0（<a href="#method">6 章</a>）</td></tr>
+<tr><td>D1</td><td>許可リージョン</td><td>東京と大阪。Control Tower のリージョン拒否コントロールで制限する。ホームリージョンは必ず含める<a class="ref" href="#s11">[11]</a></td></tr>
+<tr><td>D2</td><td>Workloads の下を事業部で分けるか</td><td>まず環境（Prod / NonProd）で分ける。許可サービス・リージョン・データ分類が事業部で違う場合だけ、事業部の層を足す。OU は 5 階層まで<a class="ref" href="#s12">[12]</a><a class="ref" href="#s1">[1]</a></td></tr>
+<tr><td>D3</td><td>組織外からのアクセス（外部 SaaS・取引先）</td><td>IAM Access Analyzer の外部アクセスの検出結果で洗い出し<a class="ref" href="#s13">[13]</a>、RCP と信頼ポリシーで例外にするアカウント ID の一覧を作る</td></tr>
+<tr><td>D4</td><td>必須タグ</td><td><code>CostCenter</code> / <code>Owner</code> / <code>Environment</code> / <code>DataClassification</code></td></tr>
+<tr><td>D5</td><td>緊急時のアクセス</td><td>管理アカウントにブレークグラス用の IAM ユーザーを置く。パスワードとハードウェア MFA は別の担当者が保管し、使ったら通知する<a class="ref" href="#s14">[14]</a>。Identity Center の障害に備え、IdP から IAM へ直接フェデレーションする緊急用の経路も用意する<a class="ref" href="#s15">[15]</a></td></tr>
+<tr><td>D6</td><td>ネットワークハブ</td><td>既存のハブアカウントを最後に移す（<a href="#c-share">7.3</a>）。所有者が移った後もブリッジ共有が残ることをパイロットで確認し、残らなければ新組織にハブを新設して段階的に切り替える</td></tr>
+<tr><td>D7</td><td>VPC 共有</td><td>止められないシステムは、移行の前に参加者を自前の VPC と TGW 接続へ移す（<a href="#c-vpc">7.4</a>）</td></tr>
+<tr><td>D8</td><td>移行ウェーブと変更凍結</td><td>ウェーブの前後 1 週間は、共有リソースの変更を凍結する</td></tr>
+<tr><td>D9</td><td>Identity Center の入口</td><td>会社のドメインの URL を入口にして、今のポータルへ転送する。新組織を作るなら、移行の前に利用者をこの URL へ切り替える（<a href="#c-access">7.7</a>）</td></tr>
+</table></div>
+
+<!-- 3 -->
+<h2 id="target">3. OU とアカウント</h2>
+<p>AWS ホワイトペーパーの推奨 OU<a class="ref" href="#s16">[16]</a>から、最初から必要なものに絞った。OU は組織図ではなく、同じ統制を受ける単位で分ける。Control Tower 4.0 では Security OU は必須ではないが、サービス連携に使うアカウントは同じ親 OU に置く必要がある<a class="ref" href="#s17">[17]</a>。</p>
+
+<figure class="diagram">
+  <div class="canvas"><a href="diagrams/org-structure.drawio.svg" target="_blank" rel="noopener"><img src="diagrams/org-structure.drawio.svg" alt="新 Organization の OU とアカウントの構成。移行したアカウントは Root 直下に入り、Transitional OU を経て配置先の OU へ移る"></a></div>
+  <figcaption>図 1　新組織の OU とアカウント。移行したアカウントは Root 直下に入り、Transitional OU で棚卸ししてから配置先の OU へ移す。</figcaption>
+</figure>
+
+<div class="table-wrap"><table>
+<tr><th>OU</th><th>目的</th><th>主な統制</th><th>採否</th></tr>
+<tr><td>Security</td><td>組織のログの保管と、検知系サービスの委任管理</td><td>ログバケットの削除と変更を拒否。人は閲覧だけ</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Infrastructure</td><td>ネットワークハブ、ID、共有サービス、バックアップの保管先</td><td>TGW・Resolver・Direct Connect の変更をネットワーク用のロールに限る</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Deployments</td><td>CI/CD と IaC の実行ロール</td><td>パイプライン以外の書き込みを拒否</td><td><span class="tag t-rec">推奨</span></td></tr>
+<tr><td>Workloads（Prod / NonProd）</td><td>業務システム</td><td>ネットワークの変更を制限。Prod は削除系の操作も制限</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Sandbox</td><td>実験用。社内網とはつながない</td><td>高額なインスタンス、RI・Savings Plans の購入、TGW 接続を禁止。予算に上限</td><td><span class="tag t-rec">推奨</span></td></tr>
+<tr><td>Policy Staging</td><td>ポリシー変更の事前検証</td><td>本番の OU と同じ構造の子 OU を置く</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Exceptions</td><td>承認済みの例外</td><td>アカウント単位でポリシーを付け、四半期ごとに見直す</td><td><span class="tag t-rec">推奨</span></td></tr>
+<tr><td>Transitional</td><td>移行してきたアカウントの受け入れと棚卸し</td><td>Root のポリシーと、移行元と同等のバックアップポリシーだけ。Control Tower には登録しない</td><td><span class="tag t-must">必須</span></td></tr>
+<tr><td>Suspended</td><td>閉鎖待ちと、侵害時の隔離</td><td>組織の管理用ロール以外をすべて拒否</td><td><span class="tag t-must">必須</span></td></tr>
+</table></div>
+<p>Transitional では移行元の SCP と RCP が外れる。滞在は棚卸しの間だけにし、その間は検知で補う（組織を離れても、Security Hub の設定はアカウントに残る<a class="ref" href="#s18">[18]</a>）。統制を弱めたくない場合は、移行元の SCP と RCP を写した子 OU を Transitional の下に作る。</p>
+
+<div class="table-wrap"><table>
+<tr><th>アカウント</th><th>OU</th><th>役割</th></tr>
+<tr><td>Management</td><td>Root 直下</td><td>請求、Organizations、Control Tower、Identity Center の組織インスタンス。SCP と RCP が効かないので<a class="ref" href="#s19">[19]</a><a class="ref" href="#s20">[20]</a>、ワークロードは置かない。ログインはブレークグラスと少数の管理者だけ</td></tr>
+<tr><td>Log Archive</td><td>Security</td><td>組織の CloudTrail と Config のログ</td></tr>
+<tr><td>Audit</td><td>Security</td><td>Security Hub・GuardDuty・Inspector・Macie・Detective・IAM Access Analyzer の委任管理者</td></tr>
+<tr><td>Network</td><td>Infrastructure</td><td>TGW、Route 53 Resolver、Network Firewall、Direct Connect、Firewall Manager</td></tr>
+<tr><td>Identity</td><td>Infrastructure</td><td>Identity Center とルートアクセス一元管理の委任管理者</td></tr>
+<tr><td>Shared Services / Backup</td><td>Infrastructure</td><td>AD などの共通サービスと、アカウント間バックアップのコピー先</td></tr>
+<tr><td>CI/CD</td><td>Deployments</td><td>IaC パイプラインと、Organizations ポリシーのデプロイ用ロール</td></tr>
+</table></div>
+<p>委任管理者のアカウントには SCP と RCP が効く<a class="ref" href="#s19">[19]</a><a class="ref" href="#s20">[20]</a>。</p>
+
+<!-- 4 -->
+<h2 id="guardrails">4. ガードレール</h2>
+
+<h3 id="g-where">4.1 付ける場所</h3>
+<div class="table-wrap"><table class="kv">
+<tr><th>付与先</th><th>ポリシー</th><th>理由</th></tr>
+<tr><td>Root</td><td>SCP：FullAWSAccess と Root-Guard<br>AI サービスのオプトアウト<br>タグポリシー（キーと値の定義だけ。強制しない）</td><td>移ってきたアカウントは Root 直下に入り、その時点で Root のポリシーが効く<a class="ref" href="#s3">[3]</a>。そのため動作を変えないものだけを置く。AI オプトアウトで消えるのは、サービス改善のために保存されたコンテンツだけ<a class="ref" href="#s21">[21]</a></td></tr>
+<tr><td>Transitional</td><td>移行元と同等のバックアップポリシー</td><td>組織を離れると、移行元の組織ポリシーは適用されなくなる<a class="ref" href="#s22">[22]</a></td></tr>
+<tr><td>その他の OU</td><td>共通：Baseline SCP、リージョン拒否、RCP、EC2・S3 ポリシー、Security Hub・Inspector ポリシー<br>OU ごと：固有の SCP、タグの強制、バックアップ、チャット、Bedrock、Upgrade rollout</td><td>業務を止めうる統制は、<a href="#g-check">4.6</a> の確認を済ませたアカウントにだけ効かせる</td></tr>
+</table></div>
+<p>リージョン拒否には、OU ごとに設定できる Control Tower のコントロール <code>CT.MULTISERVICE.PV.1</code> を使う<a class="ref" href="#s11">[11]</a>。ランディングゾーン全体のリージョン拒否は、ベースラインを有効にしたすべての OU に効き、OU ごとには設定できない<a class="ref" href="#s23">[23]</a>。</p>
+
+<h3 id="g-types">4.2 ポリシーの種類と上限</h3>
+<p>上限は公式ユーザーガイドの表による<a class="ref" href="#s24">[24]</a>。</p>
+<div class="table-wrap"><table>
+<tr><th>ポリシー</th><th>区分</th><th>管理アカウント</th><th>上限（数 / サイズ）</th><th>用途</th></tr>
+<tr><td>SCP</td><td>認可</td><td>効かない</td><td class="nw">10 / 10,240 文字</td><td>プリンシパルが実行できる操作の上限。2025-09 から IAM ポリシー言語のすべての要素を使える<a class="ref" href="#s25">[25]</a></td></tr>
+<tr><td>RCP</td><td>認可</td><td>効かない</td><td class="nw">5 / 5,120 文字</td><td>リソースへのアクセスの上限（データ境界）</td></tr>
+<tr><td>EC2</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>IMDS、公開ブロック、許可 AMI、VPC 暗号化などの固定</td></tr>
+<tr><td>S3</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>S3 パブリックアクセスブロックの 4 項目を一括で設定する<a class="ref" href="#s26">[26]</a></td></tr>
+<tr><td>タグ</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>タグのキーと値の標準化</td></tr>
+<tr><td>バックアップ</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>バックアッププランの一括配布</td></tr>
+<tr><td>AI サービスのオプトアウト</td><td>宣言型</td><td>効く</td><td class="nw">5 / 2,500</td><td>AI サービスがサービス改善にコンテンツを使うのを止める<a class="ref" href="#s21">[21]</a></td></tr>
+<tr><td>Security Hub</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>新しい Security Hub の有効化と設定<a class="ref" href="#s27">[27]</a><a class="ref" href="#s28">[28]</a></td></tr>
+<tr><td>Inspector</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>Inspector の一括有効化</td></tr>
+<tr><td>Bedrock</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>推論の呼び出しに Guardrails を自動で適用する<a class="ref" href="#s29">[29]</a></td></tr>
+<tr><td>チャットアプリケーション</td><td>宣言型</td><td>効く</td><td class="nw">5 / 10,000</td><td>接続できる Slack ワークスペースと Teams テナントを限定する<a class="ref" href="#s30">[30]</a></td></tr>
+<tr><td>Upgrade rollout</td><td>宣言型</td><td>効く</td><td class="nw">10 / 10,000</td><td>RDS / Aurora の自動マイナーバージョンアップグレードの順序<a class="ref" href="#s31">[31]</a></td></tr>
+<tr><td>Shield Network Security Director</td><td>宣言型</td><td>—</td><td class="nw"><span class="unv">unverified:</span> 表に記載なし</td><td>Network Security Director の一括有効化<a class="ref" href="#s32">[32]</a></td></tr>
+</table></div>
+<p>数の上限は、直接付けたポリシーだけを数える。SCP は常に 1 本以上付いている必要があり<a class="ref" href="#s33">[33]</a>、SCP を有効にすると FullAWSAccess が付く<a class="ref" href="#s34">[34]</a>。RCP を有効にすると、外せない <code>RCPFullAWSAccess</code> が Root とすべての OU・アカウントに付き、5 本の上限に数えられる<a class="ref" href="#s33">[33]</a>。そのため独自の RCP は 4 本までになる。サイズは、コンソールで保存すると空白を除いて数え、CLI・SDK（IaC を含む）では書いたとおりに数える<a class="ref" href="#s33">[33]</a>。</p>
+
+<h3 id="g-scp">4.3 SCP</h3>
+<p>拒否リスト方式にする。FullAWSAccess を外して代わりの許可を用意しないと、メンバーアカウントのすべての操作が失敗する<a class="ref" href="#s19">[19]</a>。</p>
+<div class="table-wrap"><table>
+<tr><th>SCP</th><th>付与先</th><th>主な拒否</th><th>例外</th></tr>
+<tr><td>Root-Guard</td><td>Root</td><td>組織からの離脱（<code>organizations:LeaveOrganization</code>）と、他組織からの招待の承諾（<code>organizations:AcceptHandshake</code>）</td><td>なし</td></tr>
+<tr><td>Baseline</td><td>Transitional 以外の各 OU</td><td>CloudTrail・Config・GuardDuty・Security Hub・Access Analyzer の停止と削除、IAM ユーザーとアクセスキーの作成、ルートの長期の認証情報の使用、EBS の既定の暗号化の無効化、リージョンの有効化と無効化、例外用ロールの作成と変更</td><td>Control Tower の実行ロール、セキュリティ自動化用のロール</td></tr>
+<tr><td>リージョン拒否</td><td>Transitional 以外の各 OU</td><td>許可リージョン以外への操作（<code>CT.MULTISERVICE.PV.1</code>）。IAM や請求などのグローバルサービスは、コントロールの SCP で対象外になっている<a class="ref" href="#s11">[11]</a></td><td><code>ExemptedPrincipalARNs</code> と <code>ExemptedActions</code> で足す<a class="ref" href="#s11">[11]</a></td></tr>
+<tr><td>Protect-Security</td><td>Security</td><td>ログバケットと KMS キーの削除、ポリシーの変更</td><td>ログ管理用のロール</td></tr>
+<tr><td>Protect-Network</td><td>Infrastructure、Workloads</td><td>TGW、VPC ピアリング、IGW、Direct Connect、Route 53 Resolver の作成と変更</td><td>ネットワーク用とパイプライン用のロール</td></tr>
+<tr><td>Prod-Protect</td><td>Workloads/Prod</td><td><code>kms:ScheduleKeyDeletion</code>、<code>backup:DeleteBackupVault</code>、<code>backup:DeleteRecoveryPoint</code>、<code>rds:DeleteDBInstance</code>、<code>rds:DeleteDBCluster</code></td><td>ブレークグラス用のロール</td></tr>
+<tr><td>CI-Only</td><td>Deployments</td><td>パイプライン用のロール以外による書き込み</td><td>パイプライン用のロール</td></tr>
+<tr><td>Sandbox-Cost</td><td>Sandbox</td><td>許可していないインスタンスタイプ（<code>ec2:InstanceType</code> 条件）、RI・Savings Plans の購入、TGW 接続</td><td>なし</td></tr>
+<tr><td>Deny-All</td><td>Suspended</td><td>すべての操作</td><td>組織の管理用ロール</td></tr>
+</table></div>
+
+<p><b>Root-Guard で招待の承諾も拒否する理由：</b>直接移行では、移行先から届いた招待をアカウント側で承諾するだけで組織を移る<a class="ref" href="#s3">[3]</a>。離脱の拒否だけでは足りない。<code>LeaveOrganization</code> の権限が要るかは、公式ドキュメントの中で記述が分かれる。移行のページは直接移行では不要とし<a class="ref" href="#s3">[3]</a>、招待の承諾のページは組織のメンバーなら必要としている<a class="ref" href="#s35">[35]</a>（<span class="unv">unverified:</span> どちらが正しいか）。そこで両方を拒否する。</p>
+<p><b>Root に付けた拒否は、その下のすべての OU とアカウントに効く</b><a class="ref" href="#s34">[34]</a>。切り戻しや事業の売却でアカウントを組織の外へ出すときだけ、変更管理のもとで対象アカウントを除外する条件（<code>"StringNotEquals": {"aws:PrincipalAccount": ["対象のアカウント ID"]}</code>）を加え、終わったら戻す。</p>
+
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "RootGuard",
+    "Effect": "Deny",
+    "Action": ["organizations:LeaveOrganization", "organizations:AcceptHandshake"],
+    "Resource": "*"
+  }]
+}</code></pre>
+
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Sid": "ProtectSecurityServices", "Effect": "Deny",
+      "Action": [
+        "cloudtrail:StopLogging", "cloudtrail:DeleteTrail",
+        "config:StopConfigurationRecorder", "config:DeleteConfigurationRecorder",
+        "config:DeleteDeliveryChannel",
+        "guardduty:DeleteDetector", "guardduty:DisassociateFromAdministratorAccount",
+        "guardduty:DisassociateFromMasterAccount",
+        "securityhub:DisableSecurityHub", "securityhub:DisableSecurityHubV2",
+        "access-analyzer:DeleteAnalyzer"
+      ],
+      "Resource": "*",
+      "Condition": { "ArnNotLike": { "aws:PrincipalArn": [
+        "arn:aws:iam::*:role/AWSControlTowerExecution",
+        "arn:aws:iam::*:role/org-security-automation"
+      ] } } },
+    { "Sid": "DenyLongLivedIamCredentials", "Effect": "Deny",
+      "Action": ["iam:CreateUser", "iam:CreateAccessKey", "iam:CreateLoginProfile"],
+      "Resource": "*",
+      "Condition": { "ArnNotLike": { "aws:PrincipalArn":
+        "arn:aws:iam::*:role/org-iam-exception" } } },
+    { "Sid": "DenyRootLongTermCredentials", "Effect": "Deny",
+      "Action": "*", "Resource": "*",
+      "Condition": { "ArnLike": { "aws:PrincipalArn": "arn:aws:iam::*:root" },
+                     "Null": { "aws:AssumedRoot": "true" } } },
+    { "Sid": "ProtectAccountSettings", "Effect": "Deny",
+      "Action": ["ec2:DisableEbsEncryptionByDefault", "account:EnableRegion", "account:DisableRegion"],
+      "Resource": "*",
+      "Condition": { "ArnNotLike": { "aws:PrincipalArn":
+        "arn:aws:iam::*:role/org-security-automation" } } },
+    { "Sid": "ProtectExceptionRoles", "Effect": "Deny",
+      "Action": [
+        "iam:AttachRolePolicy", "iam:CreateRole", "iam:DeleteRole",
+        "iam:DeleteRolePermissionsBoundary", "iam:DeleteRolePolicy", "iam:DetachRolePolicy",
+        "iam:PutRolePermissionsBoundary", "iam:PutRolePolicy", "iam:UpdateAssumeRolePolicy",
+        "iam:UpdateRole", "iam:UpdateRoleDescription"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:role/org-security-automation",
+        "arn:aws:iam::*:role/org-iam-exception"
+      ],
+      "Condition": { "ArnNotLike": { "aws:PrincipalArn": [
+        "arn:aws:iam::*:role/AWSControlTowerExecution",
+        "arn:aws:iam::*:role/stacksets-exec-*"
+      ] } } }
+  ]
+}</code></pre>
+<ul class="list">
+  <li><b>例外に使うロールは、作成と変更を SCP で拒否して守る。</b><code>org-security-automation</code> と <code>org-iam-exception</code> は本書の仮の名前。Control Tower も、例外にしている StackSets のロールを同じ形の必須コントロールで守り、子アカウントのプリンシパルがそのロールで権限を得られないようにしている<a class="ref" href="#s36">[36]</a>。</li>
+  <li><b>ルートは長期の認証情報だけを拒否する。</b><code>DenyRootLongTermCredentials</code> は公式ドキュメントの例と同じ形で、ルートの長期の認証情報の使用だけを拒否し、<code>AssumeRoot</code> のセッションは拒否しない<a class="ref" href="#s37">[37]</a>。</li>
+  <li><b>Security Hub の停止は 2 つの操作で拒否する。</b>新しい Security Hub には <code>DisableSecurityHub</code> とは別に <code>DisableSecurityHubV2</code> がある<a class="ref" href="#s38">[38]</a>。</li>
+  <li><b>EBS の既定の暗号化は IaC で設定する。</b>リージョンごとのアカウント設定で、EC2 ポリシーでは設定できない<a class="ref" href="#s39">[39]</a>。全アカウント・全許可リージョンで有効にし、無効化を SCP で拒否する。準拠は Security Hub の EC2.7 で確認する<a class="ref" href="#s40">[40]</a>。有効にしても、既存のボリュームとスナップショットには影響しない<a class="ref" href="#s41">[41]</a>。既定のキーは AWS マネージドキー（<code>aws/ebs</code>）で<a class="ref" href="#s41">[41]</a>、これで暗号化したスナップショットを使う AMI は他のアカウントに共有できない<a class="ref" href="#s42">[42]</a>。AMI を配るアカウントは、カスタマー管理キーを既定にする。</li>
+</ul>
+
+<h3 id="g-rcp">4.4 RCP</h3>
+<p>RCP は、組織外のプリンシパルからのアクセスも止める。対象サービスは 60 を超えるが<a class="ref" href="#s20">[20]</a>、最初は S3・STS・KMS・SQS・Secrets Manager に絞る。公式ドキュメントも、影響を十分に試さずに Root へ付けないよう強く勧めている<a class="ref" href="#s20">[20]</a>。</p>
+<div class="table-wrap"><table>
+<tr><th>RCP</th><th>内容</th><th>付与先</th></tr>
+<tr><td>Perimeter-Core</td><td>信頼する組織以外の ID によるアクセスを拒否する（<code>aws:PrincipalOrgID</code>）。AWS サービスによるアクセスは、自組織のリソースを起点とするものに限る（<code>aws:SourceOrgID</code>）<a class="ref" href="#s37">[37]</a></td><td>テスト用アカウント → 下位の OU → Transitional 以外の各 OU の順に広げる<a class="ref" href="#s20">[20]</a></td></tr>
+<tr><td>Enforce-TLS</td><td><code>aws:SecureTransport</code> が false のアクセスを拒否する<a class="ref" href="#s43">[43]</a></td><td>Transitional 以外の各 OU</td></tr>
+</table></div>
+<ul class="list">
+  <li><b>STS はフェデレーションを対象から外す。</b><code>sts:AssumeRoleWithSAML</code> と <code>sts:AssumeRoleWithWebIdentity</code> のリクエストには <code>aws:PrincipalOrgID</code> が含まれない<a class="ref" href="#s44">[44]</a>。<code>sts:*</code> にかけると、GitHub Actions などの OIDC、EKS の IRSA<a class="ref" href="#s45">[45]</a>、IdP から IAM への直接の SAML が拒否される。STS には <code>sts:AssumeRole</code> だけにかけ、フェデレーションはロールの信頼ポリシーで絞る<a class="ref" href="#s44">[44]</a>。Identity Center が作るロールでは <code>AssumeRoleWithSAML</code> を使えない<a class="ref" href="#s46">[46]</a>（<span class="unv">unverified:</span> Identity Center 経由のサインインに RCP が影響しないこと）。</li>
+  <li><b>移行期間中は、新旧両方の組織 ID を並べる。</b>否定形の条件演算子に複数の値を書くと NOR で評価されるので<a class="ref" href="#s47">[47]</a>、両方を並べれば「どちらの組織でもない場合だけ拒否」になる。旧組織を削除したら旧 ID を外す。</li>
+  <li><b>組織外からの正当なアクセスは、先に例外にする。</b>IAM Access Analyzer の外部アクセスの検出結果で洗い出し<a class="ref" href="#s13">[13]</a>、<code>aws:PrincipalAccount</code> で除外する（D3）。ELB のアクセスログを受けるバケットが旧形式のポリシーなら、新形式に直してから付ける。旧形式は ELB の AWS アカウントをプリンシパルにし、新形式はサービスプリンシパルを使う<a class="ref" href="#s48">[48]</a>。</li>
+  <li><b>S3 のウェブサイトエンドポイントは HTTPS に対応しない</b><a class="ref" href="#s49">[49]</a>。TLS を強制する前に、公開コンテンツを CloudFront と OAC の配信に移す。</li>
+</ul>
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Sid": "EnforceOrgIdentities", "Effect": "Deny", "Principal": "*",
+      "Action": "s3:*", "Resource": "*",
+      "Condition": {
+        "StringNotEqualsIfExists": {
+          "aws:PrincipalOrgID": ["o-NEWORGID", "o-OLDORGID"],
+          "aws:PrincipalAccount": ["111122223333"]
+        },
+        "BoolIfExists": { "aws:PrincipalIsAWSService": "false" } } },
+    { "Sid": "EnforceConfusedDeputyProtection", "Effect": "Deny", "Principal": "*",
+      "Action": "s3:*", "Resource": "*",
+      "Condition": {
+        "StringNotEqualsIfExists": { "aws:SourceOrgID": ["o-NEWORGID", "o-OLDORGID"] },
+        "Null": { "aws:SourceAccount": "false" },
+        "Bool": { "aws:PrincipalIsAWSService": "true" } } }
+  ]
+}</code></pre>
+<p class="meta">S3 の例。<code>111122223333</code> は D3 で例外にする組織外のアカウント。同じブロックに書いた条件キーは AND で評価されるので<a class="ref" href="#s47">[47]</a>、組織内か例外のアカウントなら拒否されない。</p>
+
+<h3 id="g-decl">4.5 宣言型ポリシー</h3>
+<p>宣言型ポリシーは、API の許可・拒否ではなくサービスの設定を固定する。サービスリンクロールにも効き、外すと付ける前の設定に戻る<a class="ref" href="#s4">[4]</a>。</p>
+<div class="table-wrap"><table>
+<tr><th>EC2 ポリシーの属性<a class="ref" href="#s39">[39]</a></th><th>推奨値</th><th>付与先</th><th>注意</th></tr>
+<tr><td><code>instance_metadata_defaults</code></td><td><code>http_tokens=required</code><br><code>http_put_response_hop_limit=2</code></td><td>Transitional 以外</td><td>起動時に指定のないインスタンスは IMDSv2 必須になる。アカウントの既定値は AMI の設定より優先され、起動時の指定には劣後する<a class="ref" href="#s50">[50]</a>。<code>required</code> にする前に、IMDSv1 を使っているインスタンスがないことを確認する。<code>http_tokens_enforced=enabled</code> にすると、IMDSv1 のインスタンスの起動と、既存のインスタンスでの IMDSv1 の有効化が失敗する<a class="ref" href="#s39">[39]</a></td></tr>
+<tr><td><code>snapshot_block_public_access</code></td><td><code>block_all_sharing</code></td><td>Transitional 以外</td><td>公開済みのスナップショットも非公開になる<a class="ref" href="#s39">[39]</a></td></tr>
+<tr><td><code>image_block_public_access</code></td><td><code>block_new_sharing</code></td><td>Transitional 以外</td><td>AMI を公開する事業があるアカウントは Exceptions OU へ</td></tr>
+<tr><td><code>serial_console_access</code></td><td><code>disabled</code></td><td>Transitional 以外</td><td>障害対応でシリアルコンソールを使うアカウントは Exceptions OU へ</td></tr>
+<tr><td><code>vpc_block_public_access</code></td><td><code>block_ingress</code><br><code>exclusions_allowed=enabled</code></td><td>Workloads</td><td>除外していない VPC・サブネットで許可されるインターネット通信は、NAT ゲートウェイと Egress-only IGW を通るものだけ<a class="ref" href="#s51">[51]</a>。除外は各アカウントで作る<a class="ref" href="#s39">[39]</a>。新しい公開構成は Network アカウントに集める</td></tr>
+<tr><td><code>allowed_images_settings</code></td><td>まず <code>audit_mode</code>、次に <code>enabled</code></td><td>Workloads/Prod</td><td><code>enabled</code> では、許可した AMI からしか起動できない<a class="ref" href="#s52">[52]</a></td></tr>
+<tr><td><code>vpc_encryption_control</code></td><td><code>attempt_monitor</code></td><td>暗号化の監査が必要な OU だけ</td><td>2026-03 から有料（<a href="#cost">9 章</a>）。いきなり強制にしない</td></tr>
+</table></div>
+<pre><code>{
+  "ec2_attributes": {
+    "exception_message": { "@@assign": "Denied by organization policy. See https://wiki.example.com/aws-guardrails" },
+    "instance_metadata_defaults": {
+      "http_tokens": { "@@assign": "required" },
+      "http_put_response_hop_limit": { "@@assign": "2" }
+    },
+    "snapshot_block_public_access": { "state": { "@@assign": "block_all_sharing" } },
+    "image_block_public_access":    { "state": { "@@assign": "block_new_sharing" } },
+    "serial_console_access":        { "status": { "@@assign": "disabled" } }
+  }
+}</code></pre>
+<p class="meta">エラーメッセージには、個人を特定できる情報を書かない<a class="ref" href="#s53">[53]</a>。</p>
+
+<div class="table-wrap"><table class="kv">
+<tr><th>ポリシー</th><th>推奨設定</th><th>付与先</th></tr>
+<tr><td>S3</td><td><code>public_access_block_configuration</code> を <code>all</code> にする。公開コンテンツは CloudFront と OAC で配信する</td><td>Transitional 以外</td></tr>
+<tr><td>AI サービスのオプトアウト</td><td><code>services.default.opt_out_policy</code> を <code>optOut</code> にする。子で上書きさせないなら <code>@@operators_allowed_for_child_policies</code> を <code>["@@none"]</code> にする<a class="ref" href="#s54">[54]</a></td><td>Root</td></tr>
+<tr><td>タグ</td><td>Root ではキーと値の定義だけにする。<code>enforced_for</code> を書くと、準拠しないタグ値でのリソースの作成が止まる<a class="ref" href="#s55">[55]</a>ので、強制は OU に付ける。タグのない作成は止まらない。必須タグは、IaC なら「Required tag keys」の報告モードで、API なら <code>aws:RequestTag</code> 条件の SCP で強制する<a class="ref" href="#s55">[55]</a></td><td>Root（定義）<br>OU（強制）</td></tr>
+<tr><td>バックアップ</td><td>Prod は日次と週次で、Backup アカウントへコピーする。NonProd は日次で短期保持</td><td>Workloads<br>Transitional（移行元と同等）</td></tr>
+<tr><td>Security Hub・Inspector</td><td>検知系の有効化。委任管理者は Audit アカウント</td><td>Transitional 以外</td></tr>
+<tr><td>Bedrock・チャット・Upgrade rollout</td><td>用途のある OU だけに付ける。移したアカウントの生成 AI の応答や ChatOps を変えないよう、Root には付けない</td><td>対象の OU</td></tr>
+</table></div>
+
+<h3 id="g-check">4.6 統制を効かせる前の確認</h3>
+<p>アカウントを Transitional から配置先の OU へ移すと、次の統制が一度に効く。移す前に、止まるものがないことをアカウントごとに確認する。方式 0 で既存のアカウントを新しい OU へ移すときも同じ。</p>
+<div class="table-wrap"><table class="lbl">
+<tr><th>統制</th><th>止まりうるもの</th><th>事前の確認</th></tr>
+<tr><td>リージョン拒否</td><td>許可外のリージョンへの呼び出し。Bedrock のクロスリージョン推論は、送り先のリージョンも許可するか、推論プロファイルの例外が要る<a class="ref" href="#s56">[56]</a><a class="ref" href="#s57">[57]</a></td><td>CloudTrail で呼び出し先のリージョンを集計する。データイベントは既定では記録されないので<a class="ref" href="#s58">[58]</a>、S3 などへのデータアクセスは別に確認する</td></tr>
+<tr><td>IAM ユーザーとキーの作成拒否</td><td>IAM ユーザーやキーを作る処理。SES の SMTP 認証情報の発行も <code>CreateUser</code> と <code>CreateAccessKey</code> を使う<a class="ref" href="#s59">[59]</a></td><td>CloudTrail で <code>CreateUser</code>・<code>CreateAccessKey</code> の実行者を確認する。キーのローテーションの仕組みも含める</td></tr>
+<tr><td>ルートの長期認証情報の拒否</td><td>ルートのアクセスキーやパスワードを使う処理</td><td>認証情報レポートで、ルートのアクセスキーの最終使用日を確認する<a class="ref" href="#s60">[60]</a></td></tr>
+<tr><td>Protect-Network・Prod-Protect</td><td>アプリのパイプラインによるネットワークの変更や、DB の削除を伴うデプロイ</td><td>CloudTrail で対象の API の実行者を集計し、正当なものを例外のロールに含める</td></tr>
+<tr><td>RCP</td><td>組織外からのアクセス、HTTP でのアクセス</td><td><a href="#g-rcp">4.4</a> の確認（Access Analyzer、ELB のアクセスログ、S3 のウェブサイトエンドポイント）</td></tr>
+<tr><td>S3 の公開ブロック</td><td>公開しているバケット（静的サイトなど）</td><td>Access Analyzer の検出結果で公開アクセスを確認する<a class="ref" href="#s13">[13]</a></td></tr>
+<tr><td>IMDS の既定値</td><td>新しく起動するインスタンスで IMDSv1 を使う処理</td><td><code>MetadataNoToken</code> メトリクスが 0 であること<a class="ref" href="#s61">[61]</a></td></tr>
+<tr><td>許可 AMI</td><td>許可外の AMI からのインスタンスの起動<a class="ref" href="#s52">[52]</a></td><td>監査モードの結果で確認する。Marketplace の AMI には <code>aws-marketplace</code>、論理エアギャップボールトのバックアップには <code>aws-backup-vault</code> を条件に入れる<a class="ref" href="#s52">[52]</a>。AWS Backup のアカウント間コピーは、コピー元のアカウント ID を許可しないと失敗する<a class="ref" href="#s62">[62]</a></td></tr>
+<tr><td>VPC ブロックパブリックアクセス</td><td>NAT ゲートウェイと Egress-only IGW を通らないインターネット通信<a class="ref" href="#s51">[51]</a></td><td>IGW へのルートがあるサブネットを洗い出し、先に除外を作る。影響の評価方法は公式ドキュメントにある<a class="ref" href="#s51">[51]</a></td></tr>
+<tr><td>タグの強制</td><td>準拠しないタグ値でのリソースの作成<a class="ref" href="#s55">[55]</a></td><td>強制する前に、準拠していないタグの付け方を確認する</td></tr>
+<tr><td>EBS の既定の暗号化</td><td>AMI の他アカウントへの配布<a class="ref" href="#s42">[42]</a></td><td>AMI を配るアカウントは、既定のキーをカスタマー管理キーにする</td></tr>
+</table></div>
+
+<!-- 5 -->
+<h2 id="identity">5. ID・ルート・ログ・検知</h2>
+<ul class="list">
+  <li><b>ルートユーザー：</b>ルートアクセスの一元管理を有効にし、メンバーアカウントのルートのパスワード・アクセスキー・MFA を削除する<a class="ref" href="#s63">[63]</a>。移ってきたアカウントは、削除の前にルートの認証情報が使われていないことを確認する（<a href="#g-check">4.6</a>）。特権タスクは、管理アカウントか委任管理者から、最大 15 分のルートセッションで行う。使えるのは、ルートの認証情報の監査・削除・パスワードの再作成と、S3・SQS のポリシーのロック解除だけ<a class="ref" href="#s64">[64]</a>。</li>
+  <li><b>IAM Identity Center：</b>許可セットを「OU × 職務」で標準化する。本番の書き込み権限は、承認を経た一時的な昇格で渡す<a class="ref b" href="#b1">[B1]</a>。</li>
+  <li><b>機械用の ID：</b>CI/CD は OIDC フェデレーションを使い、長期のアクセスキーを発行しない（STS の RCP は <a href="#g-rcp">4.4</a> に従う）。使っていない権限は IAM Access Analyzer で見直す。</li>
+  <li><b>代替連絡先：</b>請求・運用・セキュリティの代替連絡先には、個人ではなく配布リストを登録する。メンバーアカウントの分は、管理アカウントか委任管理者からまとめて更新できる<a class="ref" href="#s65">[65]</a>。</li>
+  <li><b>監査ログ：</b>組織の CloudTrail（Control Tower 連携）を Log Archive に保管する。Control Tower のログバケットには、ポリシー・ログ設定・暗号化・ライフサイクルの変更を禁じる必須コントロールがかかる<a class="ref" href="#s36">[36]</a>。<span class="unv">unverified:</span> このバケットに後から Object Lock を加えられるか。</li>
+  <li><b>検知：</b>GuardDuty・Security Hub・Inspector・Macie・Detective・Access Analyzer を Audit アカウントに委任し、自動有効化を設定する。移行時の注意は <a href="#c-auto">7.6</a>。</li>
+</ul>
+
+<!-- 6 -->
+<h2 id="method">6. 移行方式の選択</h2>
+<div class="table-wrap"><table>
+<tr><th>方式</th><th>内容</th><th>使う場面</th></tr>
+<tr><td><b>0. 既存組織の中で作り直す</b></td><td>新しい組織を作らず、既存組織の OU・ポリシー・Control Tower を作り直す。組織を移さないので、<a href="#change">7 章</a>の変化はほとんど起きない</td><td>管理アカウントを変えなくてよい場合の第一候補</td></tr>
+<tr><td><b>A. アカウントの直接移行</b></td><td>新組織から招待し、移すアカウントで承諾する。スタンドアロンの期間はない<a class="ref" href="#s2">[2]</a>。リソース・データ・アカウント ID は変わらず、RI と Savings Plans もアカウントと一緒に移る<a class="ref" href="#s3">[3]</a></td><td>新組織が必要な場合の、ほぼすべてのメンバーアカウント</td></tr>
+<tr><td><b>B. 新しいアカウントへの再構築</b></td><td>新組織の新しいアカウントに環境を作り、データを移してから切り替える</td><td>旧管理アカウントで動くワークロード。方式 A で影響ゼロを確認できないもの（<a href="#p-limits">8.5</a>）</td></tr>
+<tr><td><b>C. 旧管理アカウント</b></td><td>直接移行はできない。旧組織を削除した後、メンバーとして招待する<a class="ref" href="#s3">[3]</a></td><td>最後に行う。これまで SCP と RCP が効いていなかったので、Transitional で確認してから配置する</td></tr>
+</table></div>
+
+<div class="table-wrap"><table>
+<tr><th>比べる点</th><th>方式 0</th><th>方式 A</th></tr>
+<tr><td>Identity Center の URL とサインイン</td><td>変わらない</td><td>変わる<a class="ref" href="#s66">[66]</a></td></tr>
+<tr><td>Identity Center と連携するアプリ</td><td>影響なし</td><td>新しいインスタンスへ付け替える（<span class="unv">unverified:</span> アプリごとの手順）</td></tr>
+<tr><td>RAM の共有、組織 ID の条件</td><td>変わらない</td><td>ブリッジ共有と新旧 ID の併記が要る（<a href="#c-share">7.3</a>・<a href="#c-cond">7.5</a>）</td></tr>
+<tr><td>請求の履歴、割引の共有</td><td>変わらない</td><td>変わる（<a href="#c-other">7.8</a>）</td></tr>
+<tr><td>販売者の一致、招待、アカウント数の上限</td><td>関係ない</td><td>満たす必要がある（<a href="#c-blockers">7.2</a>）</td></tr>
+<tr><td>管理アカウント（支払元）の変更</td><td><b>できない</b><a class="ref" href="#s1">[1]</a></td><td>できる</td></tr>
+</table></div>
+<p>新組織が必要なのは、支払元の法人を変える、別の組織へ統合するなど、管理アカウントを変える場合に限られる。管理アカウントの問題が「ワークロードが載っている」「不要な権限が残っている」だけなら、ワークロードを別のアカウントへ移し、権限を整理すれば方式 0 で足りる。</p>
+<p>方式 0 でも、アカウントを別の OU へ移せば、効くポリシーはその場で変わる。<a href="#g-check">4.6</a> の確認をしてから移す。Control Tower の自動登録が有効な場合、未登録の OU へ移すと登録が外れ、Control Tower のリソースが削除される<a class="ref" href="#s67">[67]</a><a class="ref" href="#s68">[68]</a>。アカウントは登録済みの OU の間でだけ移す。一括請求の機能だけの組織なら、すべての機能を有効にする。招待で参加したアカウントには承認が要る<a class="ref" href="#s69">[69]</a>。</p>
+
+<!-- 7 -->
+<h2 id="change">7. 移行で変わるものと対処</h2>
+
+<h3 id="c-overview">7.1 変わるものの全体像</h3>
+<p>組織を移ると、アカウントには次の 6 種類の変化が起きる。このうちシステムの停止につながるのは ①〜④。種類ごとに全件を洗い出し、移行の前に打ち消しておく。</p>
+<div class="table-wrap"><table>
+<tr><th>種類</th><th>例</th><th>洗い出し方</th><th>対処</th></tr>
+<tr><td class="nw">① 共有が外れる</td><td>RAM の共有（TGW、Resolver ルール、VPC 共有など）。組織宛の AMI・Lambda レイヤー・Service Catalog・ライセンス</td><td>各アカウントの全リージョンで <code>aws ram get-resource-shares --resource-owner OTHER-ACCOUNTS</code> を実行する<a class="ref" href="#s70">[70]</a>。RAM の共有はリージョンごとに作られる<a class="ref" href="#s71">[71]</a>。RAM を使わない組織宛の共有は、サービスごとの設定で確認する</td><td><a href="#c-share">7.3</a><br><a href="#c-vpc">7.4</a></td></tr>
+<tr><td class="nw">② 条件が合わない</td><td><code>aws:PrincipalOrgID</code> などの条件。Identity Center のロールの ARN</td><td>IaC と実環境のポリシーから、組織 ID（<code>o-</code>）・OU（<code>ou-</code>）・ルート（<code>r-</code>）と条件キーを検索する。実環境は Account Assessment for AWS Organizations で調べられる<a class="ref" href="#s3">[3]</a></td><td><a href="#c-cond">7.5</a></td></tr>
+<tr><td class="nw">③ 旧組織の自動化</td><td>StackSets、Firewall Manager、Control Tower、Config の組織ルール、バックアップポリシー</td><td>連携サービスを <code>aws organizations list-aws-service-access-for-organization</code><a class="ref" href="#s72">[72]</a>、委任管理者を <code>list-delegated-administrators</code><a class="ref" href="#s73">[73]</a> で一覧にし、1 つずつ確認する</td><td><a href="#c-auto">7.6</a></td></tr>
+<tr><td class="nw">④ 新組織の自動化</td><td>Root のポリシー、GuardDuty の自動有効化、Config の組織ルール、StackSets の自動デプロイ</td><td>新組織の連携サービスを同じ方法で一覧にする</td><td><a href="#c-auto">7.6</a></td></tr>
+<tr><td class="nw">⑤ 人のアクセス</td><td>ポータルの URL、割り当て、連携アプリ</td><td>Identity Center の割り当てとアプリの一覧</td><td><a href="#c-access">7.7</a></td></tr>
+<tr><td class="nw">⑥ 監視・請求・契約</td><td>組織の証跡、アカウント間の監視、割引の共有、組織としての契約</td><td><a href="#c-other">7.8</a> の表で確認する</td><td><a href="#c-other">7.8</a></td></tr>
+</table></div>
+<p><b>影響を受けないとされるもの：</b>VPC ピアリング、Site-to-Site VPN、Direct Connect（ゲートウェイの共有、ホスト型の仮想インターフェイスを含む）、プライベートホストゾーンのアカウント間の関連付け、Resolver のインバウンドエンドポイント<a class="ref b" href="#b2">[B2]</a>、Directory Service の共有ディレクトリ、アカウントのクォータ<a class="ref b" href="#b3">[B3]</a>。どれもブログの記述なので、パイロットでも確認する。</p>
+
+<h3 id="c-blockers">7.2 移行を失敗させる前提条件</h3>
+<div class="table-wrap"><table class="lbl">
+<tr><th>条件</th><th>対処</th></tr>
+<tr><td>販売者（Seller of Record）が違う</td><td>移すアカウントと移行先の組織の販売者が違うと失敗する<a class="ref" href="#s3">[3]</a>。販売者は請求先と連絡先から自動で決まり、請求コンソールの「支払い設定」の Service provider か、「税金設定」の Seller 列で確認する<a class="ref" href="#s74">[74]</a>。全アカウントと新組織の管理アカウントを確認する</td></tr>
+<tr><td>新組織の作成から 7 日未満</td><td>受け入れられない<a class="ref" href="#s3">[3]</a>。組織の作成を計画の最初に置く</td></tr>
+<tr><td>組織内で作成してから 4 日未満のアカウント</td><td>移せない。招待で参加したアカウントは対象外<a class="ref" href="#s3">[3]</a></td></tr>
+<tr><td>閉鎖済み・停止中のアカウント</td><td>移せない<a class="ref" href="#s3">[3]</a></td></tr>
+<tr><td>委任管理者のアカウント</td><td>先に登録を解除する<a class="ref" href="#s3">[3]</a>。解除でデータや設定が消えるサービスがある（下の表）</td></tr>
+<tr><td>旧組織の Control Tower に登録したアカウント</td><td>移す前に、アカウントに直接適用した Control Tower のベースラインと、検出・プロアクティブコントロールを無効にする。予防コントロールは継承したままでよい。自動登録を使っているなら、Root、未登録の OU、ランディングゾーン 4.0 以降なら予防コントロールだけの OU のどれかへ移す<a class="ref" href="#s5">[5]</a>。登録を外すと、Control Tower がアカウントに作ったリソースは削除される<a class="ref" href="#s67">[67]</a>。Account Factory で作ったアカウントには、既定で Control Tower が VPC を作る<a class="ref" href="#s75">[75]</a>（<span class="unv">unverified:</span> この VPC が削除の対象になるか）</td></tr>
+<tr><td>移行元の SCP・IAM ポリシー</td><td>移行を妨げるポリシーがあってはならない<a class="ref" href="#s3">[3]</a>。招待の承諾には <code>organizations:AcceptHandshake</code>、組織のメンバーなら <code>organizations:LeaveOrganization</code>、サービスリンクロールの作成が要る場合は <code>iam:CreateServiceLinkedRole</code> が要る<a class="ref" href="#s35">[35]</a></td></tr>
+<tr><td>アカウント数の上限</td><td>既定は 10 で、送信中の招待も数える。移す全数に余裕を足して先に引き上げる。24 時間に送れる招待は、20 件とアカウント数の上限の大きいほう<a class="ref" href="#s33">[33]</a></td></tr>
+<tr><td>招待の失効</td><td>15 日で失効する<a class="ref" href="#s33">[33]</a><a class="ref" href="#s76">[76]</a>。ウェーブの直前に送る</td></tr>
+<tr><td>Config アグリゲーターの上限</td><td>まとめて移すと、すべてのアグリゲーターを合わせて週 1,000 アカウントの追加・削除の上限に達することがある<a class="ref" href="#s5">[5]</a>。ウェーブの規模を決めるときに考慮する</td></tr>
+<tr><td>AWS との価格契約</td><td>請求先が変わるので、契約の適用範囲を事前に AWS と確認する<a class="ref b" href="#b4">[B4]</a></td></tr>
+</table></div>
+<div class="table-wrap"><table class="lbl">
+<tr><th>委任管理者を解除するサービス</th><th>解除すると起きること</th></tr>
+<tr><td>Firewall Manager</td><td>その管理者が作ったポリシーがすべて削除される<a class="ref" href="#s77">[77]</a>。DNS Firewall のポリシーが消えると、ルールグループと VPC の関連付けが外れる<a class="ref b" href="#b5">[B5]</a></td></tr>
+<tr><td>Detective</td><td>その管理者の組織の行動グラフが削除される<a class="ref" href="#s78">[78]</a></td></tr>
+<tr><td>Systems Manager Explorer</td><td>その管理者が作った組織のリソースデータ同期が削除される<a class="ref" href="#s79">[79]</a></td></tr>
+<tr><td>IAM Access Analyzer</td><td>組織を信頼ゾーンにしたアナライザーが無効になる<a class="ref b" href="#b5">[B5]</a></td></tr>
+<tr><td>IPAM</td><td>共有プールからの割り当てができなくなる<a class="ref b" href="#b5">[B5]</a></td></tr>
+</table></div>
+<p>委任管理者はハブ系のアカウントに集まっているので、ハブは最後に移す。Firewall Manager の管理者を解除する前に、新組織で同等のポリシーを動かしておく。</p>
+
+<h3 id="c-share">7.3 共有（RAM ほか）</h3>
+<p>組織内の共有は、利用者のアカウントが組織を離れると外れる。OU・組織全体・組織内の個別アカウントのどれに共有していても同じ<a class="ref" href="#s6">[6]</a>。<code>RetainSharingOnAccountLeaveOrganization=true</code> で作った共有では、利用者に招待が送られ（外部との共有と同じ）、利用者が組織を離れてもアクセスが残る<a class="ref" href="#s6">[6]</a>。本書ではこれを「ブリッジ共有」と呼ぶ。</p>
+<ul class="list">
+  <li><b>条件：</b><code>allowExternalPrincipals=true</code> が要る。新しく作る共有にしか設定できず、OU や組織全体への共有と、組織内でしか共有できない種類には使えない<a class="ref" href="#s6">[6]</a>。</li>
+  <li><b>SCP との関係：</b>条件キー <code>ram:RetainSharingOnAccountLeaveOrganization</code> で、組織全体に強制できる<a class="ref" href="#s7">[7]</a>。移行元で外部との共有を禁じる SCP（<code>ram:RequestedAllowsExternalPrincipals</code>）<a class="ref" href="#s80">[80]</a>があるとブリッジ共有を作れない。移行先の SCP が <code>ram:AcceptResourceShareInvitation</code> を拒否していないことも確認する<a class="ref b" href="#b6">[B6]</a>。</li>
+</ul>
+
+<figure class="diagram">
+  <div class="canvas"><a href="diagrams/migration-bridge-share.drawio.svg" target="_blank" rel="noopener"><img src="diagrams/migration-bridge-share.drawio.svg" alt="移行中のネットワーク共有。ブリッジ共有で TGW と Resolver ルールへのアクセスが続き、組織宛の元の共有は移行で外れる"></a></div>
+  <figcaption>図 2　移行中の状態（Workload アカウントは移行済み、Network アカウントは旧組織に残っている）。元の共有は移行で外れるが、事前に承諾したブリッジ共有でアクセスが続く。ブリッジ共有がないと、TGW の通信は続くが、Resolver ルールが VPC から外れて名前解決が止まる。</figcaption>
+</figure>
+
+<div class="table-wrap"><table>
+<tr><th>リソース（RAM のタイプ）</th><th>組織外と共有<a class="ref" href="#s8">[8]</a></th><th>共有が外れたときの影響</th><th>対策</th></tr>
+<tr><td>Transit Gateway（<code>ec2:TransitGateway</code>）</td><td class="ok-mark">可</td><td>アタッチメントは動き続ける。利用者は TGW を参照できなくなり、TGW と共有の所有者はアタッチメントを削除できる<a class="ref" href="#s81">[81]</a>。事例では IaC による TGW の変更が権限エラーになった<a class="ref b" href="#b6">[B6]</a></td><td>ブリッジ共有。移行直後に IaC の plan で差分とエラーを確認する</td></tr>
+<tr><td>Resolver ルール（<code>route53resolver:ResolverRule</code>）</td><td class="ok-mark">可</td><td><b>VPC との関連付けが外れ、転送先ドメイン（オンプレミスなど）の名前解決が止まる</b><a class="ref" href="#s82">[82]</a></td><td>ブリッジ共有が必須。転送先ドメインの名前解決を外形監視する</td></tr>
+<tr><td>Route 53 Profiles（<code>route53profiles:Profile</code>）</td><td class="ok-mark">可</td><td><b>Profile の設定（プライベートホストゾーン、Resolver ルール、DNS Firewall）が VPC から外れる</b><a class="ref" href="#s83">[83]</a></td><td>ブリッジ共有が必須</td></tr>
+<tr><td>DNS Firewall ルールグループ</td><td class="ok-mark">可</td><td><span class="unv">unverified:</span> 公式ドキュメントに記述なし。Firewall Manager で配っている場合は、クリーンアップを無効にすれば関連付けは残る<a class="ref b" href="#b3">[B3]</a></td><td>ブリッジ共有、または <a href="#c-auto">7.6</a> の Firewall Manager の設定</td></tr>
+<tr><td>Resolver クエリログ設定</td><td class="ok-mark">可</td><td>VPC との関連付けが外れ、クエリログの記録が止まる<a class="ref" href="#s84">[84]</a></td><td>ブリッジ共有</td></tr>
+<tr><td>プレフィックスリスト（<code>ec2:PrefixList</code>）</td><td class="ok-mark">可</td><td>事例では、既存の参照は動き続け、新しいリソースの作成が止まった<a class="ref b" href="#b6">[B6]</a></td><td>ブリッジ共有</td></tr>
+<tr><td>IPAM プール（<code>ec2:IpamPool</code>）</td><td class="ok-mark">可</td><td>割り当て済みの CIDR は残り、離脱後は解放できない<a class="ref b" href="#b3">[B3]</a></td><td>ブリッジ共有<a class="ref" href="#s7">[7]</a>。解放が要る割り当ては移行前に解放する</td></tr>
+<tr><td>Private CA（<code>acm-pca:CertificateAuthority</code>）</td><td class="ok-mark">可</td><td>事例では、共有は外れたが発行済みの証明書は使えた<a class="ref b" href="#b6">[B6]</a>。<span class="unv">unverified:</span> ACM による自動更新への影響</td><td>ブリッジ共有。移行期間中に更新期限が来る証明書を洗い出す</td></tr>
+<tr><td>Network Firewall（ファイアウォール、ポリシー、ルールグループ）</td><td class="ok-mark">可</td><td><span class="unv">unverified:</span> 公式ドキュメントに記述なし</td><td>ブリッジ共有。Firewall Manager で管理しているなら <a href="#c-auto">7.6</a></td></tr>
+<tr><td>VPC Lattice（サービスネットワークなど）、Cloud WAN コアネットワーク</td><td class="ok-mark">可</td><td><span class="unv">unverified:</span> 公式ドキュメントに記述なし</td><td>ブリッジ共有</td></tr>
+<tr><td>Glue Data Catalog（Lake Formation 経由）</td><td class="ok-mark">可</td><td>データベースとテーブルにアクセスできず、クエリや ETL が失敗する<a class="ref b" href="#b7">[B7]</a></td><td>AWS 公開のスクリプト（aws-samples/sample-aws-ram-org-migration）でブリッジ共有を作る<a class="ref b" href="#b7">[B7]</a></td></tr>
+<tr><td>License Manager のライセンス設定</td><td class="ok-mark">可</td><td>共有から外れる<a class="ref b" href="#b3">[B3]</a></td><td>ブリッジ共有、または移行後に共有し直す</td></tr>
+<tr><td>Capacity Reservation</td><td class="ok-mark">可（Capacity Blocks は不可）</td><td><span class="unv">unverified:</span> 公式ドキュメントに記述なし。予約を使えないと、インスタンスはオンデマンドで起動し、費用が増えうる<a class="ref" href="#s8">[8]</a></td><td>ブリッジ共有</td></tr>
+<tr><td><b>サブネット（VPC 共有、<code>ec2:Subnet</code>）</b></td><td class="ng-mark">不可</td><td>既存のリソースは動き続けるが、新しいリソースは作れない。ELB など AWS マネージドサービスの自動処理（Auto Scaling、ノードの置き換え）は、サブネットへの継続的なアクセスを要する場合がある<a class="ref" href="#s85">[85]</a></td><td><a href="#c-vpc">7.4</a></td></tr>
+<tr><td><b>セキュリティグループ（<code>ec2:SecurityGroup</code>）</b></td><td class="ng-mark">不可</td><td>既存の ENI は動き続け、ルールの更新も反映される。新しい関連付けと、そのセキュリティグループを使う新しいインスタンスの起動はできない<a class="ref" href="#s86">[86]</a></td><td>VPC 共有と一緒に扱う（<a href="#c-vpc">7.4</a>）</td></tr>
+<tr><td>Cloud Map 名前空間、Resource Explorer ビュー、Outposts（サイトを除く）、Bedrock カスタムモデル、AppRegistry、Oracle Database@AWS</td><td class="ng-mark">不可</td><td>移行と同時に外れる<a class="ref" href="#s6">[6]</a><a class="ref" href="#s8">[8]</a></td><td>所有者と利用者を同じウェーブで移し、移行後に共有し直す</td></tr>
+</table></div>
+<p>表にない種類も同じ考え方で扱う。組織外と共有できるかは RAM の一覧で確認する<a class="ref" href="#s8">[8]</a>。「アカウント ID を指定した共有なら移行後も使える」とは考えない。2022 年の AWS ブログにはそう読める記述があるが<a class="ref b" href="#b2">[B2]</a>、現行の RAM ドキュメントは組織内の個別アカウント宛の共有も外れるとしている<a class="ref" href="#s6">[6]</a>。</p>
+
+<h4>ブリッジ共有の手順</h4>
+<ol class="steps">
+  <li><b>棚卸し：</b>元の共有ごとに、リソース・利用者・権限・リージョンを記録する<a class="ref b" href="#b6">[B6]</a>。</li>
+  <li><b>作成と承諾：</b>同じリソースと利用者に、保持設定付きの共有を別に作る（1 つのリソースは複数の共有に入れられる）。利用者側で、移行の前に招待を承諾する<a class="ref" href="#s6">[6]</a><a class="ref b" href="#b6">[B6]</a>。</li>
+  <li><b>移行：</b>利用者を先に、所有者（Network アカウント）を最後に移す<a class="ref b" href="#b8">[B8]</a>。元の共有は外れ、ブリッジ共有でアクセスが続く<a class="ref" href="#s6">[6]</a>。</li>
+  <li><b>正式な共有へ：</b>所有者が新組織に入ったら、RAM の組織共有を有効にし、OU 宛の共有を作り直す。関連付けがすべて <code>ASSOCIATED</code> になったことを確認する<a class="ref b" href="#b6">[B6]</a>。</li>
+  <li><b>ブリッジ共有の削除：</b>正式な共有が、リソース・利用者・権限をすべて含むことを確認してから消す<a class="ref b" href="#b6">[B6]</a>。</li>
+</ol>
+<p><span class="unv">unverified:</span> 所有者が移るときにブリッジ共有が残ること。2022 年のブログでは、アカウント指定の共有が所有者の移行後も続いたとあるが<a class="ref b" href="#b2">[B2]</a>、現行の仕様では確認できていない。</p>
+
+<div class="table-wrap"><table class="lbl">
+<tr><th>RAM を使わない組織宛の共有</th><th>移行で起きること</th><th>対策</th></tr>
+<tr><td>AMI（組織・OU 宛の起動許可）</td><td><span class="unv">unverified:</span> 移行後も起動できるか<a class="ref" href="#s87">[87]</a></td><td>起動テンプレートが参照する AMI に、アカウント ID 宛の共有を足す（Auto Scaling の起動失敗を防ぐ）</td></tr>
+<tr><td>Lambda レイヤー（組織宛の権限）</td><td><span class="unv">unverified:</span> 既存の関数が使い続けられるか<a class="ref" href="#s88">[88]</a></td><td>関数の更新やデプロイに備え、アカウント ID 宛の権限を足す</td></tr>
+<tr><td>Service Catalog（組織・OU 宛のポートフォリオ）</td><td>共有は組織の構成の変化に合わせて更新される<a class="ref" href="#s89">[89]</a>。プロビジョニング済みの製品は残る<a class="ref b" href="#b3">[B3]</a></td><td>新組織で同じポートフォリオを共有し、製品を付け替える<a class="ref b" href="#b5">[B5]</a></td></tr>
+<tr><td>Marketplace・License Manager（組織経由の配布）</td><td>ライセンスを使えなくなり、その製品を新しく起動できない。起動済みのものは残る<a class="ref b" href="#b3">[B3]</a></td><td>新組織で配布し直す（<span class="unv">unverified:</span> 製品ごとの可否）</td></tr>
+<tr><td>AWS Backup のアカウント間コピー</td><td>同じ組織のアカウント同士でしかコピーできない。コピー済みのバックアップは残る<a class="ref" href="#s62">[62]</a></td><td>組織をまたぐ間は、同じアカウント内の別リージョンへのコピーで補う<a class="ref" href="#s90">[90]</a></td></tr>
+<tr><td>Savings Plans・RI の割引の共有</td><td>割引は組織の中で共有される。所有するアカウントが組織を離れると、Savings Plans は組織の請求に適用されなくなる<a class="ref" href="#s91">[91]</a></td><td><a href="#cost">9 章</a></td></tr>
+</table></div>
+
+<h3 id="c-vpc">7.4 VPC 共有</h3>
+<p>サブネットとセキュリティグループは組織内でしか共有できない<a class="ref" href="#s8">[8]</a>。共有が外れると、参加者の既存のリソースは動き続けるが、新しいリソースは作れない。ELB など AWS マネージドサービスの自動処理（Auto Scaling、ノードの置き換え）は、サブネットへの継続的なアクセスを要する場合がある<a class="ref" href="#s85">[85]</a>。共有は、参加者が組織を離れると外れ<a class="ref" href="#s6">[6]</a>、所有者が先に移った場合も外れる<a class="ref b" href="#b2">[B2]</a>。</p>
+<div class="table-wrap"><table>
+<tr><th>方法</th><th>内容</th><th>移行時の停止リスク</th><th>使う場面</th></tr>
+<tr><td>① 事前に分離する</td><td>参加者のワークロードを参加者自身の VPC へ移し、TGW でつなぐ。TGW はブリッジ共有で移せる</td><td>なし。分離の作業そのものは、通常の変更として別に管理する</td><td>止められないシステム</td></tr>
+<tr><td>② 同じ時間帯に続けて移す</td><td>所有者と全参加者を続けて移し、すぐに新組織で共有し直す（AWS の推奨<a class="ref b" href="#b2">[B2]</a>）。事前にスケールアウトし、変更を凍結する</td><td>あり。共有し直すまでにスケールや置き換えが起きると失敗しうる</td><td>①を取れず、リハーサル済みのもの</td></tr>
+<tr><td>③ 再構築する</td><td>方式 B</td><td>切り替えの設計しだい</td><td>①も②も取れないもの</td></tr>
+</table></div>
+<p><span class="unv">unverified:</span> 共有が外れている間の、Fargate、VPC 内の Lambda、RDS の保守など、ENI を作るサービスごとの挙動。</p>
+
+<h3 id="c-cond">7.5 権限の条件</h3>
+<ul class="list">
+  <li><b>条件キー：</b><code>aws:PrincipalOrgID</code>、<code>aws:PrincipalOrgPaths</code>、<code>aws:ResourceOrgID</code>、<code>aws:ResourceOrgPaths</code>、<code>aws:SourceOrgID</code>、<code>aws:SourceOrgPaths</code><a class="ref" href="#s37">[37]</a>。組織 ID を指定した IAM ポリシーは、移行に合わせて更新が要る<a class="ref" href="#s3">[3]</a>。移行前に新旧両方の組織 ID を並べ、旧組織を削除したら旧 ID を外す<a class="ref" href="#s47">[47]</a>。</li>
+  <li><b>OU パス：</b>パスはアカウントが属する OU の位置を表す<a class="ref" href="#s37">[37]</a>。新組織の中で OU を移っても変わるので、Transitional と配置先の両方のパスを並べるか、組織単位のパス（<code>o-xxxxxxxxxx/*</code>）にする。</li>
+  <li><b>直す場所：</b>S3 バケットポリシー、KMS キーポリシー、IAM ロールの信頼ポリシー、SNS・SQS・Lambda・ECR・Secrets Manager のリソースポリシー、AWS Backup のボールトのポリシー、EventBridge のイベントバスのポリシー、VPC エンドポイントポリシー、StackSets のロール、CloudWatch Logs の宛先ポリシー<a class="ref" href="#s92">[92]</a>、CloudWatch のアカウント間監視のシンクポリシー<a class="ref" href="#s93">[93]</a>、両方の組織の SCP と RCP。旧組織に残るリソースと新組織のリソースの両方を直す。</li>
+  <li><b>Identity Center のロール：</b>割り当てで作られるロール（<code>AWSReservedSSO_許可セット名_接尾辞</code>）は、アカウントの割り当てがすべて消えると削除され、次の割り当てでは別の接尾辞のロールになる<a class="ref" href="#s94">[94]</a>。このロールの ARN を KMS キーポリシーや EKS の <code>aws-auth</code> ConfigMap で参照していて、IAM で作った代わりのロールがないと、AWS サポートに頼まないと戻せない<a class="ref" href="#s94">[94]</a>。移行の前に、IAM で作ったロールをこれらに加えておく。ほかのリソースポリシーは、新しい割り当ての直後に更新する。</li>
+  <li><b>管理用のロール：</b>旧管理アカウントからのアクセス用のロール（<code>OrganizationAccountAccessRole</code> など）は、移行しても自動では削除されない<a class="ref" href="#s3">[3]</a>。招待で参加したアカウントには、新組織の管理アカウント用のロールが自動では作られない<a class="ref" href="#s95">[95]</a>。移行の前に信頼先へ新組織の管理アカウントを加え、移行後に旧管理アカウントを外す。Control Tower に登録していたアカウントでは、登録を外すと Control Tower が実行ロールを削除して組織の管理用ロールを加え、移行先で登録すると新しい管理アカウントを信頼する実行ロールが作られる<a class="ref" href="#s5">[5]</a>。</li>
+</ul>
+
+<h3 id="c-auto">7.6 組織の自動化</h3>
+<p>組織の自動化は、アカウントが旧組織を出るときと、新組織に入るときの両方で動く。</p>
+<div class="table-wrap"><table class="lbl">
+<tr><th>旧組織を出るとき</th><th>起きること</th><th>事前の対処</th></tr>
+<tr><td><b>StackSets</b>（サービスマネージド）</td><td><b>自動デプロイが有効で、スタックを保持しない設定だと、アカウントが外れたときにスタックのリソースが削除される</b><a class="ref" href="#s96">[96]</a></td><td>「スタックを保持」に変える。新組織では、既存のスタックを StackSet に取り込める<a class="ref" href="#s97">[97]</a>。残したスタックと同じ名前のリソースは、新組織の StackSets で作らない</td></tr>
+<tr><td><b>Firewall Manager</b></td><td>ポリシーの対象から外れる。リソースクリーンアップが有効だと、保護の解除と管理下のリソースの削除が起きる<a class="ref" href="#s98">[98]</a></td><td>クリーンアップを無効にし、新組織で同等のポリシーを先に動かす。DNS Firewall のルールグループは旧ポリシーと優先度を変え、重複に備えてクォータを一時的に 2 倍にする<a class="ref b" href="#b3">[B3]</a></td></tr>
+<tr><td><b>Control Tower</b></td><td>移す前に登録を外す必要があり、外すと Control Tower が作ったリソースが削除される<a class="ref" href="#s5">[5]</a><a class="ref" href="#s67">[67]</a></td><td><a href="#c-blockers">7.2</a> の手順で外す。Account Factory の VPC でワークロードが動いているなら、パイロットで削除の対象かを確認する（<a href="#p-limits">8.5</a>）</td></tr>
+<tr><td>Config</td><td>組織の Config ルールと適合パックが削除される<a class="ref" href="#s99">[99]</a>。アグリゲーターのデータは最大 24 時間で消える<a class="ref b" href="#b3">[B3]</a></td><td>下の「Config レコーダー」</td></tr>
+<tr><td>バックアップポリシー</td><td>組織ポリシーが適用されなくなり、ポリシー由来のプランも止まる<a class="ref" href="#s22">[22]</a></td><td>Transitional に同等のポリシーを付けるか、移行前にアカウント内にプランを作る</td></tr>
+<tr><td>Security Hub・GuardDuty など</td><td>Security Hub は、組織を離れても同じ設定で有効のまま<a class="ref" href="#s18">[18]</a>。GuardDuty なども管理者との関連付けが外れるだけで、設定は残る<a class="ref" href="#s100">[100]</a><a class="ref b" href="#b3">[B3]</a></td><td>なし</td></tr>
+<tr><td>Identity Center</td><td>アカウント内のメタデータとリソースが自動で削除され、そのアカウントは Identity Center で使えなくなる<a class="ref" href="#s101">[101]</a></td><td><a href="#c-access">7.7</a></td></tr>
+</table></div>
+
+<div class="table-wrap"><table class="lbl">
+<tr><th>新組織に入るとき</th><th>対象の指定</th><th>移行中の扱い</th></tr>
+<tr><td>Root のポリシー</td><td>Root</td><td>動作を変えないものだけにする（<a href="#g-where">4.1</a>）</td></tr>
+<tr><td><b>GuardDuty の自動有効化</b>（エージェントの自動管理を含む）</td><td>組織単位。<code>NEW</code> は組織に参加したアカウント、<code>ALL</code> はすべてのアカウントで自動で有効にする<a class="ref" href="#s102">[102]</a></td><td>保護プランとエージェントの自動管理を、旧組織と同じ設定にする。エージェントの自動管理は、VPC エンドポイントとセキュリティグループを作り、新しい Fargate タスクにサイドカーを加える<a class="ref" href="#s103">[103]</a></td></tr>
+<tr><td><b>Config の組織ルール・適合パック</b></td><td>組織に参加したアカウントに展開される<a class="ref" href="#s99">[99]</a>。除外はアカウント ID で指定する<a class="ref" href="#s104">[104]</a></td><td>自動修復を含む適合パック<a class="ref" href="#s105">[105]</a>は、移行が終わるまで組織には展開しない</td></tr>
+<tr><td>StackSets の自動デプロイ</td><td>対象の OU に加わったアカウントに展開される<a class="ref" href="#s96">[96]</a></td><td>Root と Transitional を対象にしない</td></tr>
+<tr><td>Firewall Manager</td><td>OU とアカウントを含める・除外する<a class="ref" href="#s98">[98]</a></td><td>Root と Transitional を対象にしない</td></tr>
+<tr><td>Systems Manager Quick Setup のパッチポリシー</td><td>組織全体か、選んだアカウント。パッチ適用後の再起動を選べる<a class="ref" href="#s106">[106]</a></td><td>Root と Transitional のアカウントを対象にしない</td></tr>
+<tr><td>Control Tower の自動登録</td><td>登録済みの OU へ移したとき<a class="ref" href="#s68">[68]</a></td><td>Transitional は登録しない</td></tr>
+<tr><td>Security Hub・Inspector ポリシー</td><td>付けた OU</td><td>Transitional に付けない。移行元での設定がアカウントに残る<a class="ref" href="#s18">[18]</a></td></tr>
+</table></div>
+<p>ログの収集のように読み取るだけの自動化は、Transitional も対象に含めてよい。</p>
+<ul class="list">
+  <li><b>Config レコーダー：</b>新組織の組織ルールと適合パックの展開は、レコーダーがないと参加から 7 時間しか再試行されない<a class="ref" href="#s99">[99]</a>。一方、Control Tower への登録では既存のレコーダーと配信チャネルを持たないことが推奨され、残したまま登録する手順も用意されている<a class="ref" href="#s107">[107]</a>。記録の空白を作らないよう後者を優先する（<span class="unv">unverified:</span> 手順の詳細）。削除する場合は、Baseline SCP が削除を拒否するので Transitional にいる間に行う。</li>
+  <li><b>旧組織の撤去：</b>セルフマネージドの StackSets は、IAM ロールの信頼があれば組織と関係なく展開できる<a class="ref" href="#s108">[108]</a>。撤去の前に、<code>OrganizationAccountAccessRole</code> やセルフマネージドの StackSets の実行ロールの信頼から旧管理アカウントを外し、旧組織の操作が移行済みのアカウントに及ばないようにする。スタックインスタンスを消すときに <code>--retain-stacks</code> を指定すると、スタックは削除されずに残る<a class="ref" href="#s109">[109]</a>。</li>
+</ul>
+
+<h3 id="c-access">7.7 人のアクセスと Identity Center の URL</h3>
+<p>方式 0 なら、Identity Center のインスタンスをそのまま使うので、URL もサインインも変わらない。方式 A では新組織に新しいインスタンスを作る。既定の URL（<code>d-xxxxxxxxxx.awsapps.com/start</code>）はインスタンスごとに決まるので、必ず変わる<a class="ref" href="#s66">[66]</a>。URL を新しいインスタンスへ引き継ぐ方法は、公式には見当たらない（<span class="unv">unverified:</span> 引き継げないこと）。インスタンスを削除すると、許可セット・アプリ・割り当ては戻せない<a class="ref" href="#s110">[110]</a>。そこで利用者の入口を会社の URL にし、切り替えを転送先の変更だけで済ませる。</p>
+<ol class="steps">
+  <li><b>会社の URL を入口にする（移行の前）：</b>会社のドメインの URL（例：<code>https://aws.example.co.jp</code>）から今のポータルへ転送する。ブックマーク、社内ポータルのリンク、AWS CLI の <code>sso_start_url</code> をこの URL に替えてもらう。AWS CLI はこの形の URL を <code>sso_start_url</code> に使える<a class="ref" href="#s111">[111]</a>（<span class="unv">unverified:</span> 必要な CLI のバージョン）。</li>
+  <li><b>新しいポータルの URL を決める：</b>新しいインスタンスの URL を、覚えやすいサブドメインに変える。変更は一度しかできない<a class="ref" href="#s66">[66]</a>。</li>
+  <li><b>移行期間は新旧を並べる：</b>会社の URL を新旧両方へのリンクを載せた案内ページにするか、IdP（Entra ID など）のアプリ一覧に新旧 2 つを並べる。新しいインスタンス用に、SAML と SCIM の連携を別に作る<a class="ref" href="#s112">[112]</a>。</li>
+  <li><b>割り当てをすぐに適用する：</b>移したアカウントは旧 Identity Center で使えなくなる<a class="ref" href="#s101">[101]</a>。許可セットは組織内のアカウントに割り当てるものなので<a class="ref" href="#s113">[113]</a>、定義をコードで用意しておき、参加を確認したらすぐに適用する。</li>
+  <li><b>それまでの入り方を用意する：</b>新組織の管理アカウント用のロール（<a href="#c-cond">7.5</a>）と、IdP から直接フェデレーションする緊急用の経路（D5）を使う。後者は Identity Center を通らない<a class="ref" href="#s15">[15]</a>。</li>
+  <li><b>連携アプリを移す：</b>Identity Center を使うアプリ（AWS のマネージドアプリや、Identity Center を IdP にした SAML アプリ）を、新しいインスタンスへ付け替える<a class="ref b" href="#b9">[B9]</a><a class="ref b" href="#b10">[B10]</a>（<span class="unv">unverified:</span> アプリごとの手順と停止の有無）。</li>
+  <li><b>最後に入口を切り替える：</b>最後のアカウントとアプリを移したら、会社の URL の転送先を新しいポータルだけにする。旧インスタンスは、利用者とアプリの移行が済んだことを確認してから削除する。</li>
+</ol>
+
+<h3 id="c-other">7.8 監視・請求・契約</h3>
+<div class="table-wrap"><table class="lbl">
+<tr><th>対象</th><th>移行で起きること</th><th>対処</th></tr>
+<tr><td>組織の CloudTrail</td><td>組織を離れると証跡とサービスリンクロールがアカウントから削除され、それまでのログはバケットに残る。組織に入ると追加され、記録が自動で始まる<a class="ref" href="#s114">[114]</a></td><td><span class="unv">unverified:</span> 移行の瞬間に記録が欠けないこと。欠けに備えて一時的なアカウントの証跡を作る場合<a class="ref b" href="#b3">[B3]</a>は、Baseline SCP が削除を拒否するので Transitional にいる間に消す。残すと重複して課金される<a class="ref" href="#s107">[107]</a></td></tr>
+<tr><td>アカウント間の監視とログの集約</td><td>組織 ID で許可していると、移したアカウントのデータが届かなくなりうる。対象は CloudWatch のアカウント間監視<a class="ref" href="#s93">[93]</a>、CloudWatch Logs の宛先<a class="ref" href="#s92">[92]</a>、<code>aws:SourceOrgID</code> で絞ったログ用のバケット<a class="ref" href="#s37">[37]</a></td><td>新旧の組織 ID を並べる（<a href="#c-cond">7.5</a>）。<span class="unv">unverified:</span> 既存のアカウント間監視のリンクが移行後も続くか</td></tr>
+<tr><td>集約ビュー（Health、Trusted Advisor、Compute Optimizer、S3 Storage Lens など）</td><td>旧組織から外れ、新組織の集約に入る。Network Manager は TGW を登録し直す<a class="ref b" href="#b3">[B3]</a></td><td>Network Manager の再登録</td></tr>
+<tr><td>請求</td><td>承諾した時点から、料金は新組織の管理アカウントが払う<a class="ref" href="#s76">[76]</a>。組織レベルの請求の履歴は移行後に削除され、アカウントと OU のタグは作り直しが要る<a class="ref" href="#s3">[3]</a></td><td>請求データを先にエクスポートする。タグ・コスト配分タグ・予算・税金設定を新組織で設定し直し、サポートプランを新組織の管理アカウントに合わせる<a class="ref" href="#s3">[3]</a></td></tr>
+<tr><td>AWS Artifact の組織としての契約</td><td>組織を離れると対象外になる<a class="ref" href="#s22">[22]</a></td><td>必要な契約を新組織で先に受諾する（法務と確認する）</td></tr>
+<tr><td>Shield Advanced</td><td>保護は続くが、移行の前後で両方の組織に日割りの料金がかかる<a class="ref b" href="#b3">[B3]</a></td><td>旧組織を削除するときに、サポートへ統合を依頼する<a class="ref b" href="#b3">[B3]</a></td></tr>
+</table></div>
+
+<!-- 8 -->
+<h2 id="plan">8. 移行の進め方</h2>
+
+<h3 id="p-zero">8.1 影響ゼロの定義と計測</h3>
+<div class="table-wrap"><table class="kv">
+<tr><th>層</th><th>ゼロの条件</th><th>確認の方法</th></tr>
+<tr><td>通信と名前解決</td><td>TGW・VPN・Direct Connect を通る通信と、Resolver ルールによる名前解決が途切れない</td><td>各 VPC から、主な宛先への疎通と、転送先ドメインの名前解決を秒単位で繰り返す</td></tr>
+<tr><td>認可</td><td>アカウントをまたぐ呼び出し（ロールの引き受け、S3・KMS・SQS・Secrets Manager など）が拒否されない</td><td>アカウントをまたぐ API を定期的に呼ぶ。CloudTrail の AccessDenied をアカウントごとに集計する</td></tr>
+<tr><td>制御プレーン</td><td>スケール、置き換え、デプロイが失敗しない</td><td>Auto Scaling の起動失敗、ENI の作成エラー、ELB の 5xx、パイプラインの失敗を監視する</td></tr>
+<tr><td>人のアクセス</td><td>運用者がいつでもアカウントに入れる</td><td>新旧のポータルと緊急用の経路で、実際に入れることを確認する</td></tr>
+<tr><td>連携アプリ</td><td>利用者がサインインできる</td><td>対象のアプリへのサインインを試す</td></tr>
+</table></div>
+<p>基準値はウェーブの 1 週間前から取り、前後でどの指標も悪化しないことを「影響ゼロ」とする。計測の経路が組織に依存していると、移行の瞬間に計測も途切れる（<a href="#c-other">7.8</a>）。外形監視は、対象アカウントの中か、組織に依存しない監視サービスから行う。<span class="unv">unverified:</span> 移行の瞬間に一時的な拒否が起きるか（パイロットで秒単位に測る）。</p>
+
+<h3 id="p-steps">8.2 手順</h3>
+<div class="table-wrap"><table>
+<tr><th>段階</th><th>作業</th><th>完了条件</th></tr>
+<tr><td class="nw">0. 判断</td><td>方式 0 で足りるかを判断する（<a href="#method">6 章</a>）。D0〜D9 を決める</td><td>決定事項が承認されている</td></tr>
+<tr><td class="nw">1. 新組織の基盤</td><td>組織を作る（7 日の待ちが始まる）。アカウント数の上限の引き上げを申請する。Control Tower 4.0、Identity Center、ルートアクセスの一元管理、RAM の組織共有<a class="ref" href="#s6">[6]</a>、アカウント間バックアップを有効にする。会社の URL を入口にする（<a href="#c-access">7.7</a>）</td><td>Log Archive と Audit が動き、SSO でログインできる</td></tr>
+<tr><td class="nw">2. OU とガードレール</td><td>OU を作る。Root には <a href="#g-where">4.1</a> のものだけを付け、ほかの OU には Policy Staging で試したポリシーを付ける。新組織の自動化の対象から Root と Transitional を外す（<a href="#c-auto">7.6</a>）</td><td>テスト用アカウントで、想定どおりに拒否されることを確認した</td></tr>
+<tr><td class="nw">3. 依存の解消</td><td><a href="#change">7 章</a>の対処を、既存の設定に足す形で 1 つずつ適用する</td><td>適用の前後で 8.1 の指標が変わらない</td></tr>
+<tr><td class="nw">4. パイロット</td><td>本番と同じ構成（ハブ、Resolver ルール、Profiles、VPC 共有、StackSets、Firewall Manager、Control Tower、Identity Center の連携アプリ）を別の 2 つの組織で再現し、利用者 → 所有者の順に移す<a class="ref b" href="#b6">[B6]</a></td><td>8.1 の計測で影響ゼロ。<span class="unv">unverified:</span> の項目をすべて確認した</td></tr>
+<tr><td class="nw">5. カナリア</td><td>依存の最も少ない本番アカウントを 1 つ移す</td><td>手順と監視が本番で機能した</td></tr>
+<tr><td class="nw">6. ウェーブ</td><td>依存の少ない順に、利用者のアカウントから移す。ウェーブごとに観察期間を置く。移したアカウントは <a href="#g-check">4.6</a> の確認を済ませてから配置先の OU へ移す</td><td>各ウェーブで影響ゼロ</td></tr>
+<tr><td class="nw">7. ハブ</td><td>Network アカウントを最後に移し<a class="ref b" href="#b8">[B8]</a>、正式な共有に切り替えてから、ブリッジ共有を外す（<a href="#c-share">7.3</a>）</td><td>すべての関連付けが正式な共有で <code>ASSOCIATED</code></td></tr>
+<tr><td class="nw">8. 撤去</td><td>旧 ID を条件から外す。旧組織から届く経路を断ってから、旧組織の自動化・委任管理者・Identity Center を撤去し、旧組織を削除する（<a href="#c-auto">7.6</a>）。旧管理アカウントを移す（方式 C）</td><td>旧 ID への参照が残っていない</td></tr>
+<tr><td class="nw">9. 統制の強化</td><td>IMDSv2・許可 AMI・タグの強制を段階的に進める</td><td>準拠率が目標に達した</td></tr>
+</table></div>
+<p>方式 0 を選んだ場合は、既存組織の中で段階 2 を行い、<a href="#g-check">4.6</a> の確認を済ませたアカウントから新しい OU へ移し、段階 9 に進む。</p>
+
+<h3 id="p-gonogo">8.3 アカウントごとの Go / No-Go</h3>
+<ul class="list">
+  <li><a href="#change">7 章</a>の対処がすべて適用済みで、適用後に 8.1 の指標が変わっていない。</li>
+  <li>ブリッジ共有の関連付けがすべて <code>ASSOCIATED</code> になっている<a class="ref b" href="#b6">[B6]</a>。</li>
+  <li>組織内でしか共有できない共有（VPC 共有など）への依存がない。</li>
+  <li>旧組織の Control Tower の登録を、<a href="#c-blockers">7.2</a> の手順で外してある。</li>
+  <li>新組織の管理アカウント用のロールと、Identity Center の割り当ての定義ができている。KMS キーポリシーと EKS に IAM で作ったロールを加えてある。</li>
+  <li>招待を送れる（アカウント数の上限、販売者の一致、委任管理者でない）。</li>
+  <li>監視とログの経路が移行後も途切れない（<a href="#c-other">7.8</a>）。</li>
+  <li>変更凍結が効いており、担当者が立ち会える。</li>
+</ul>
+
+<h3 id="p-cutover">8.4 移行当日：監視・中止・復旧</h3>
+<ul class="list">
+  <li><b>監視：</b>8.1 の計測に加え、RAM の共有の状態変化（EventBridge）と <code>DisassociateResourceShare</code>（CloudTrail）を通知する<a class="ref b" href="#b6">[B6]</a>。</li>
+  <li><b>中止基準：</b>疎通か名前解決の失敗が 1 回でも出た、AccessDenied が基準値を超えた、ENI の作成エラーが出た、ELB の 5xx が増えた。1 つでも当てはまれば、次のアカウントへ進まない。</li>
+  <li><b>復旧は前進修正を基本にする：</b>移行後の問題の多くは、足りない許可や共有を足せば直る（条件への組織 ID の追加、共有の追加、割り当ての作成）。種類ごとに、直す手順とコードを事前に用意しておく。</li>
+  <li><b>旧組織へ戻すのは最後の手段：</b>戻すこと自体がもう一度の移行で、旧 Identity Center の割り当ての作り直しや、旧組織の自動化の再適用が起きる。新組織の Root-Guard が招待の承諾を拒否するので、対象アカウントを一時的に除外する必要もある（<a href="#g-scp">4.3</a>）。手順をパイロットで確認した場合だけ選択肢にする（<span class="unv">unverified:</span> 戻せるようになるまでの待ち時間）。旧組織の設定（共有、条件、SCP）は、すべての移行が終わるまで変えない。</li>
+  <li><b>体制：</b>ウェーブの時間帯は変更を凍結し、ネットワーク・アプリ・セキュリティの担当が立ち会う。計画は AWS のアカウントチームと共有する。事例でも、AWS のサービスチームと連携して問題に対処している<a class="ref b" href="#b6">[B6]</a>。</li>
+</ul>
+
+<h3 id="p-limits">8.5 影響ゼロを保証できないもの</h3>
+<p>次に当たるシステムは、パイロットで影響ゼロを確認できない限り、方式 A では移さない。方式 B（新しいアカウントに並行して作り、DNS の重み付けなどで利用者の流れを段階的に移す。旧環境は戻し先として残す）で移す。</p>
+<ul class="list">
+  <li>組織内でしか共有できない共有（VPC 共有など）への依存を、移行の前になくせない。</li>
+  <li>Account Factory の VPC でワークロードが動いており、登録を外すとその VPC が削除の対象になる。</li>
+  <li>Identity Center 連携アプリの付け替えで、利用者のサインインが止まる。</li>
+  <li>組織経由の Marketplace ライセンスに依存し、個別の配布に切り替えられない。</li>
+  <li>パイロットで、<span class="unv">unverified:</span> の項目の影響を確認できなかった。</li>
+</ul>
+
+<!-- 9 -->
+<h2 id="cost">9. コスト</h2>
+<div class="table-wrap"><table class="lbl">
+<tr><th>項目</th><th>内容</th></tr>
+<tr><td>Organizations・RAM・RCP</td><td>追加料金なし<a class="ref" href="#s115">[115]</a><a class="ref" href="#s71">[71]</a>。ブリッジ共有も料金はかからない</td></tr>
+<tr><td>Control Tower</td><td>本体は無料。有効になるサービス（Service Catalog、CloudTrail、Config ルールなど）に課金される。短命のワークロードが多いと Config の料金が増える<a class="ref" href="#s116">[116]</a></td></tr>
+<tr><td>検知系</td><td>GuardDuty・Security Hub・Inspector・Macie・Config は従量課金。全アカウントで有効にする前に、パイロットで月額を測る</td></tr>
+<tr><td>VPC 暗号化コントロール</td><td>2026-03-01 から有料。モードに関係なく、有効にした空でない VPC ごとに課金される。TGW で暗号化のサポートを有効にすると、接続したすべての VPC に課金される<a class="ref" href="#s117">[117]</a></td></tr>
+<tr><td>移行時だけの費用</td><td>一時的な証跡の重複課金<a class="ref" href="#s107">[107]</a><a class="ref" href="#s116">[116]</a>。Shield Advanced の両組織での日割り料金と、Firewall Manager で新旧のリソースが並ぶ期間の料金<a class="ref b" href="#b3">[B3]</a></td></tr>
+<tr><td>Savings Plans・RI</td><td>割引の共有は組織の中だけで、所有するアカウントが組織を離れると組織の請求に適用されなくなる<a class="ref" href="#s91">[91]</a>。移したアカウント自身が買った分は一緒に移る<a class="ref" href="#s3">[3]</a>。移す順序と新組織での購入時期を財務と調整する</td></tr>
+<tr><td>方式 B</td><td>並行稼働の期間は、新旧両方の料金がかかる</td></tr>
+<tr><td>人件費</td><td>最も大きいのは、棚卸し・パイロット・ウェーブの立ち会い。VPC 共有を分離する場合（<a href="#c-vpc">7.4</a> ①）は、ネットワークの再設計が加わる</td></tr>
+</table></div>
+
+<!-- 10 -->
+<h2 id="ops">10. 運用と定着</h2>
+<ul class="list">
+  <li><b>ポリシーはコードで管理する：</b>SCP・RCP・宣言型ポリシーを Git で管理し、セキュリティ担当と CCoE の 2 名で承認する。適用はパイプラインからだけ行う。</li>
+  <li><b>変更は段階的に広げる：</b>Policy Staging の子 OU → 対象 OU の 1 アカウント → 対象 OU の順に広げる<a class="ref" href="#s118">[118]</a>。SCP を絞るときは、IAM の「サービスの最終アクセス」を根拠にする。Organizations の単位でも確認できる<a class="ref" href="#s19">[19]</a>。</li>
+  <li><b>例外：</b>Exceptions OU への移動で表し、期限と責任者を台帳に記録して、四半期ごとに見直す。</li>
+  <li><b>利用者への説明：</b>EC2 ポリシーのエラーメッセージに社内 Wiki の URL を入れる<a class="ref" href="#s53">[53]</a>。ガードレールの一覧と例外の申請手順を公開する。移行の前に、会社の URL、新旧ポータルの使い分け、AWS CLI の設定の変え方を周知する。</li>
+  <li><b>役割分担：</b>CCoE は OU とポリシー、セキュリティは RCP・検知・例外の承認、ネットワークはハブと共有の移行、アプリの担当は棚卸しとウェーブの立ち会いを受け持つ。</li>
+  <li><b>指標：</b>配置先の OU にいるアカウントの割合、有効な例外の数、ガードレールによる AccessDenied の件数、アカウントの払い出しにかかる日数。</li>
+</ul>
+
+<!-- 11 -->
+<h2 id="sources">11. 出典</h2>
+<h3>公式ドキュメント</h3>
+<ul class="src">
+  <li id="s1"><span class="no">[1]</span> AWS Organizations FAQs — <a href="https://aws.amazon.com/organizations/faqs/">https://aws.amazon.com/organizations/faqs/</a></li>
+  <li id="s2"><span class="no">[2]</span> Direct account transfers（2025-11） — <a href="https://aws.amazon.com/about-aws/whats-new/2025/11/aws-organizations-direct-account-transfers/">https://aws.amazon.com/about-aws/whats-new/2025/11/aws-organizations-direct-account-transfers/</a></li>
+  <li id="s3"><span class="no">[3]</span> Migrate an account to another organization — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_account_migration.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_account_migration.html</a></li>
+  <li id="s4"><span class="no">[4]</span> Declarative policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_declarative_policies.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_declarative_policies.html</a></li>
+  <li id="s5"><span class="no">[5]</span> AWS Control Tower: Transfer an account to a different organization — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/account-transfer.html">https://docs.aws.amazon.com/controltower/latest/userguide/account-transfer.html</a></li>
+  <li id="s6"><span class="no">[6]</span> AWS RAM: sharing your resources（RetainSharingOnAccountLeaveOrganization） — <a href="https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html">https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html</a></li>
+  <li id="s7"><span class="no">[7]</span> AWS RAM maintains shares when accounts change organizations（2026-02） — <a href="https://aws.amazon.com/about-aws/whats-new/2026/02/aws-resource-access-manager/">https://aws.amazon.com/about-aws/whats-new/2026/02/aws-resource-access-manager/</a></li>
+  <li id="s8"><span class="no">[8]</span> Shareable AWS resources — <a href="https://docs.aws.amazon.com/ram/latest/userguide/shareable.html">https://docs.aws.amazon.com/ram/latest/userguide/shareable.html</a></li>
+  <li id="s9"><span class="no">[9]</span> IAM Identity Center: manage your identity source — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source.html</a></li>
+  <li id="s10"><span class="no">[10]</span> How AWS Regions work with Control Tower — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/region-how.html">https://docs.aws.amazon.com/controltower/latest/userguide/region-how.html</a></li>
+  <li id="s11"><span class="no">[11]</span> AWS Control Tower: Region deny control applied to the OU（CT.MULTISERVICE.PV.1） — <a href="https://docs.aws.amazon.com/controltower/latest/controlreference/ou-region-deny.html">https://docs.aws.amazon.com/controltower/latest/controlreference/ou-region-deny.html</a></li>
+  <li id="s12"><span class="no">[12]</span> Nested OUs in Control Tower — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/nested-ous.html">https://docs.aws.amazon.com/controltower/latest/userguide/nested-ous.html</a></li>
+  <li id="s13"><span class="no">[13]</span> Using IAM Access Analyzer（外部アクセスの検出） — <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html">https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html</a></li>
+  <li id="s14"><span class="no">[14]</span> Organizing Your AWS Environment: Design principles（Break glass access） — <a href="https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/design-principles-for-your-multi-account-strategy.html">https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/design-principles-for-your-multi-account-strategy.html</a></li>
+  <li id="s15"><span class="no">[15]</span> IAM Identity Center: Set up emergency access to the AWS Management Console — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/emergency-access.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/emergency-access.html</a></li>
+  <li id="s16"><span class="no">[16]</span> Recommended OUs and accounts — <a href="https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/recommended-ous-and-accounts.html">https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/recommended-ous-and-accounts.html</a></li>
+  <li id="s17"><span class="no">[17]</span> Control Tower landing zone 4.0 key changes — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/key-changes-lz-v4.html">https://docs.aws.amazon.com/controltower/latest/userguide/key-changes-lz-v4.html</a></li>
+  <li id="s18"><span class="no">[18]</span> Security Hub CSPM: Effect of account actions on data（組織から外れたメンバー） — <a href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-data-retention.html">https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-data-retention.html</a></li>
+  <li id="s19"><span class="no">[19]</span> Service control policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html</a></li>
+  <li id="s20"><span class="no">[20]</span> Resource control policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps.html</a></li>
+  <li id="s21"><span class="no">[21]</span> AI services opt-out policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html</a></li>
+  <li id="s22"><span class="no">[22]</span> Removing a member account from an organization（Considerations） — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_remove.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_remove.html</a></li>
+  <li id="s23"><span class="no">[23]</span> Control Tower Region deny — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/region-deny.html">https://docs.aws.amazon.com/controltower/latest/userguide/region-deny.html</a></li>
+  <li id="s24"><span class="no">[24]</span> Managing organization policies（ポリシーの種類と上限） — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies.html</a></li>
+  <li id="s25"><span class="no">[25]</span> SCP の IAM 言語フルサポート（2025-09） — <a href="https://aws.amazon.com/about-aws/whats-new/2025/09/aws-organizations-iam-language-service-control-policies/">https://aws.amazon.com/about-aws/whats-new/2025/09/aws-organizations-iam-language-service-control-policies/</a></li>
+  <li id="s26"><span class="no">[26]</span> Amazon S3 policy syntax — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3_syntax.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3_syntax.html</a></li>
+  <li id="s27"><span class="no">[27]</span> Security Hub policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_security_hub.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_security_hub.html</a></li>
+  <li id="s28"><span class="no">[28]</span> AWS Security Hub FAQs — <a href="https://aws.amazon.com/security-hub/faqs/">https://aws.amazon.com/security-hub/faqs/</a></li>
+  <li id="s29"><span class="no">[29]</span> Amazon Bedrock policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_bedrock.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_bedrock.html</a></li>
+  <li id="s30"><span class="no">[30]</span> Amazon Q Developer in chat applications organization policies — <a href="https://docs.aws.amazon.com/chatbot/latest/adminguide/chatbot-orgs-policy.html">https://docs.aws.amazon.com/chatbot/latest/adminguide/chatbot-orgs-policy.html</a></li>
+  <li id="s31"><span class="no">[31]</span> RDS upgrade rollout policy — <a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/RDS.Maintenance.AMVU.UpgradeRollout.html">https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/RDS.Maintenance.AMVU.UpgradeRollout.html</a></li>
+  <li id="s32"><span class="no">[32]</span> AWS Shield Network Security Director policies — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_network_security_director.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_network_security_director.html</a></li>
+  <li id="s33"><span class="no">[33]</span> Quotas for AWS Organizations — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_reference_limits.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_reference_limits.html</a></li>
+  <li id="s34"><span class="no">[34]</span> SCP evaluation — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_evaluation.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_evaluation.html</a></li>
+  <li id="s35"><span class="no">[35]</span> Accepting or declining an invitation（Minimum permissions） — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_accept-decline-invite.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_accept-decline-invite.html</a></li>
+  <li id="s36"><span class="no">[36]</span> Control Tower mandatory controls — <a href="https://docs.aws.amazon.com/controltower/latest/controlreference/mandatory-controls.html">https://docs.aws.amazon.com/controltower/latest/controlreference/mandatory-controls.html</a></li>
+  <li id="s37"><span class="no">[37]</span> AWS global condition context keys（aws:AssumedRoot） — <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html">https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html</a></li>
+  <li id="s38"><span class="no">[38]</span> Service Authorization Reference: AWS Security Hub — <a href="https://docs.aws.amazon.com/service-authorization/latest/reference/list_securityhub.html">https://docs.aws.amazon.com/service-authorization/latest/reference/list_securityhub.html</a></li>
+  <li id="s39"><span class="no">[39]</span> EC2 policy syntax and examples — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2_syntax.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2_syntax.html</a></li>
+  <li id="s40"><span class="no">[40]</span> Security Hub CSPM controls for Amazon EC2（EC2.7） — <a href="https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html">https://docs.aws.amazon.com/securityhub/latest/userguide/ec2-controls.html</a></li>
+  <li id="s41"><span class="no">[41]</span> Amazon EBS: Enable encryption by default — <a href="https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html">https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html</a></li>
+  <li id="s42"><span class="no">[42]</span> Share an AMI with specific AWS accounts（既定のキーで暗号化した AMI は共有不可） — <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html</a></li>
+  <li id="s43"><span class="no">[43]</span> RCP syntax — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps_syntax.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_rcps_syntax.html</a></li>
+  <li id="s44"><span class="no">[44]</span> Control access to AWS STS with VPC endpoint policies（フェデレーションと aws:PrincipalOrgID） — <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sts_vpc_endpoint_policies.html">https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sts_vpc_endpoint_policies.html</a></li>
+  <li id="s45"><span class="no">[45]</span> EKS Best Practices: Identity and Access Management（IRSA） — <a href="https://docs.aws.amazon.com/eks/latest/best-practices/identity-and-access-management.html">https://docs.aws.amazon.com/eks/latest/best-practices/identity-and-access-management.html</a></li>
+  <li id="s46"><span class="no">[46]</span> AWS CLI: sts assume-role-with-saml — <a href="https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role-with-saml.html">https://docs.aws.amazon.com/cli/latest/reference/sts/assume-role-with-saml.html</a></li>
+  <li id="s47"><span class="no">[47]</span> Conditions with multiple context keys or values — <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-logic-multiple-context-keys-or-values.html">https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-logic-multiple-context-keys-or-values.html</a></li>
+  <li id="s48"><span class="no">[48]</span> Enable access logs for your Application Load Balancer（旧形式のバケットポリシー） — <a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html">https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html</a></li>
+  <li id="s49"><span class="no">[49]</span> Amazon S3 endpoints and quotas（ウェブサイトエンドポイントは HTTPS 非対応） — <a href="https://docs.aws.amazon.com/general/latest/gr/s3.html">https://docs.aws.amazon.com/general/latest/gr/s3.html</a></li>
+  <li id="s50"><span class="no">[50]</span> Order of precedence for instance metadata options — <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html</a></li>
+  <li id="s51"><span class="no">[51]</span> Block public access to VPCs and subnets — <a href="https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html">https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html</a></li>
+  <li id="s52"><span class="no">[52]</span> Control the discovery and use of AMIs with Allowed AMIs — <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-allowed-amis.html">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-allowed-amis.html</a></li>
+  <li id="s53"><span class="no">[53]</span> EC2 policies（カスタムエラーメッセージ） — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2.html</a></li>
+  <li id="s54"><span class="no">[54]</span> AI services opt-out policy syntax — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out_syntax.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out_syntax.html</a></li>
+  <li id="s55"><span class="no">[55]</span> Tag policies: Enforce tagging consistency — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_tag-policies-enforcement.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_tag-policies-enforcement.html</a></li>
+  <li id="s56"><span class="no">[56]</span> Amazon Bedrock: Geographic cross-Region inference（SCP の要件） — <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/geographic-cross-region-inference.html">https://docs.aws.amazon.com/bedrock/latest/userguide/geographic-cross-region-inference.html</a></li>
+  <li id="s57"><span class="no">[57]</span> Amazon Bedrock: Global cross-Region inference（SCP の要件） — <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/global-cross-region-inference.html">https://docs.aws.amazon.com/bedrock/latest/userguide/global-cross-region-inference.html</a></li>
+  <li id="s58"><span class="no">[58]</span> CloudTrail: Logging data events — <a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html">https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html</a></li>
+  <li id="s59"><span class="no">[59]</span> Obtaining Amazon SES SMTP credentials — <a href="https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html">https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html</a></li>
+  <li id="s60"><span class="no">[60]</span> Generate credential reports for your AWS account — <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html">https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html</a></li>
+  <li id="s61"><span class="no">[61]</span> Transition to using Instance Metadata Service Version 2（MetadataNoToken） — <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-metadata-transition-to-version-2.html">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-metadata-transition-to-version-2.html</a></li>
+  <li id="s62"><span class="no">[62]</span> AWS Backup: Creating backup copies across AWS accounts — <a href="https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html">https://docs.aws.amazon.com/aws-backup/latest/devguide/create-cross-account-backup.html</a></li>
+  <li id="s63"><span class="no">[63]</span> Centrally manage root access for member accounts — <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html">https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html</a></li>
+  <li id="s64"><span class="no">[64]</span> AWS STS API Reference: AssumeRoot — <a href="https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html">https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html</a></li>
+  <li id="s65"><span class="no">[65]</span> Update the alternate contacts for your AWS account — <a href="https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact-alternate.html">https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact-alternate.html</a></li>
+  <li id="s66"><span class="no">[66]</span> Customizing the AWS access portal URL — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/howtochangeURL.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/howtochangeURL.html</a></li>
+  <li id="s67"><span class="no">[67]</span> Control Tower: Unenroll an account — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/unmanage-account.html">https://docs.aws.amazon.com/controltower/latest/userguide/unmanage-account.html</a></li>
+  <li id="s68"><span class="no">[68]</span> Control Tower: Move and enroll accounts with auto-enrollment — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/account-auto-enrollment.html">https://docs.aws.amazon.com/controltower/latest/userguide/account-auto-enrollment.html</a></li>
+  <li id="s69"><span class="no">[69]</span> Standard migration process to enable all features with Organizations — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/manage-begin-all-features-standard-migration.html">https://docs.aws.amazon.com/organizations/latest/userguide/manage-begin-all-features-standard-migration.html</a></li>
+  <li id="s70"><span class="no">[70]</span> AWS CLI: ram get-resource-shares — <a href="https://docs.aws.amazon.com/cli/latest/reference/ram/get-resource-shares.html">https://docs.aws.amazon.com/cli/latest/reference/ram/get-resource-shares.html</a></li>
+  <li id="s71"><span class="no">[71]</span> What is AWS RAM（料金） — <a href="https://docs.aws.amazon.com/ram/latest/userguide/what-is.html">https://docs.aws.amazon.com/ram/latest/userguide/what-is.html</a></li>
+  <li id="s72"><span class="no">[72]</span> AWS CLI: organizations list-aws-service-access-for-organization — <a href="https://docs.aws.amazon.com/cli/latest/reference/organizations/list-aws-service-access-for-organization.html">https://docs.aws.amazon.com/cli/latest/reference/organizations/list-aws-service-access-for-organization.html</a></li>
+  <li id="s73"><span class="no">[73]</span> AWS CLI: organizations list-delegated-administrators — <a href="https://docs.aws.amazon.com/cli/latest/reference/organizations/list-delegated-administrators.html">https://docs.aws.amazon.com/cli/latest/reference/organizations/list-delegated-administrators.html</a></li>
+  <li id="s74"><span class="no">[74]</span> Finding the seller of record — <a href="https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/finding-the-seller-of-record.html">https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/finding-the-seller-of-record.html</a></li>
+  <li id="s75"><span class="no">[75]</span> Control Tower: About enrolling existing accounts（VPC の扱い） — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/enroll-account.html">https://docs.aws.amazon.com/controltower/latest/userguide/enroll-account.html</a></li>
+  <li id="s76"><span class="no">[76]</span> Managing account invitations with AWS Organizations — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_invites.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_invites.html</a></li>
+  <li id="s77"><span class="no">[77]</span> Firewall Manager: Changing the default administrator account — <a href="https://docs.aws.amazon.com/waf/latest/developerguide/fms-change-administrator.html">https://docs.aws.amazon.com/waf/latest/developerguide/fms-change-administrator.html</a></li>
+  <li id="s78"><span class="no">[78]</span> Amazon Detective: Removing the Detective administrator account — <a href="https://docs.aws.amazon.com/detective/latest/userguide/accounts-remove-admin-overview.html">https://docs.aws.amazon.com/detective/latest/userguide/accounts-remove-admin-overview.html</a></li>
+  <li id="s79"><span class="no">[79]</span> Systems Manager: Deregister an Explorer delegated administrator — <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/Explorer-setup-delegated-administrator-deregister.html">https://docs.aws.amazon.com/systems-manager/latest/userguide/Explorer-setup-delegated-administrator-deregister.html</a></li>
+  <li id="s80"><span class="no">[80]</span> Example SCPs for AWS RAM — <a href="https://docs.aws.amazon.com/ram/latest/userguide/security-scp.html">https://docs.aws.amazon.com/ram/latest/userguide/security-scp.html</a></li>
+  <li id="s81"><span class="no">[81]</span> Work with AWS Transit Gateway（共有の解除） — <a href="https://docs.aws.amazon.com/vpc/latest/tgw/working-with-transit-gateways.html">https://docs.aws.amazon.com/vpc/latest/tgw/working-with-transit-gateways.html</a></li>
+  <li id="s82"><span class="no">[82]</span> Amazon Route 53 FAQs（Resolver ルールの共有停止） — <a href="https://aws.amazon.com/route53/faqs/">https://aws.amazon.com/route53/faqs/</a></li>
+  <li id="s83"><span class="no">[83]</span> Working with shared Route 53 Profiles — <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/sharing-profiles.html">https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/sharing-profiles.html</a></li>
+  <li id="s84"><span class="no">[84]</span> AWS CLI: disassociate-resolver-query-log-config — <a href="https://docs.aws.amazon.com/cli/latest/reference/route53resolver/disassociate-resolver-query-log-config.html">https://docs.aws.amazon.com/cli/latest/reference/route53resolver/disassociate-resolver-query-log-config.html</a></li>
+  <li id="s85"><span class="no">[85]</span> Working with shared subnets — <a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-sharing-share-subnet-working-with.html">https://docs.aws.amazon.com/vpc/latest/userguide/vpc-sharing-share-subnet-working-with.html</a></li>
+  <li id="s86"><span class="no">[86]</span> Share security groups with AWS Organizations — <a href="https://docs.aws.amazon.com/vpc/latest/userguide/security-group-sharing.html">https://docs.aws.amazon.com/vpc/latest/userguide/security-group-sharing.html</a></li>
+  <li id="s87"><span class="no">[87]</span> Manage AMI sharing with an organization or OU — <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/share-amis-org-ou-manage.html">https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/share-amis-org-ou-manage.html</a></li>
+  <li id="s88"><span class="no">[88]</span> Lambda AddLayerVersionPermission — <a href="https://docs.aws.amazon.com/lambda/latest/api/API_AddLayerVersionPermission.html">https://docs.aws.amazon.com/lambda/latest/api/API_AddLayerVersionPermission.html</a></li>
+  <li id="s89"><span class="no">[89]</span> AWS Service Catalog API Reference: EnableAWSOrganizationsAccess — <a href="https://docs.aws.amazon.com/servicecatalog/latest/dg/API_EnableAWSOrganizationsAccess.html">https://docs.aws.amazon.com/servicecatalog/latest/dg/API_EnableAWSOrganizationsAccess.html</a></li>
+  <li id="s90"><span class="no">[90]</span> AWS Backup: Creating backup copies across AWS Regions — <a href="https://docs.aws.amazon.com/aws-backup/latest/devguide/cross-region-backup.html">https://docs.aws.amazon.com/aws-backup/latest/devguide/cross-region-backup.html</a></li>
+  <li id="s91"><span class="no">[91]</span> Reserved Instances and Savings Plans discount sharing — <a href="https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/ri-turn-off.html">https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/ri-turn-off.html</a></li>
+  <li id="s92"><span class="no">[92]</span> CloudWatch Logs API Reference: PutDestinationPolicy — <a href="https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDestinationPolicy.html">https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDestinationPolicy.html</a></li>
+  <li id="s93"><span class="no">[93]</span> CloudWatch Observability Access Manager API Reference: PutSinkPolicy — <a href="https://docs.aws.amazon.com/OAM/latest/APIReference/API_PutSinkPolicy.html">https://docs.aws.amazon.com/OAM/latest/APIReference/API_PutSinkPolicy.html</a></li>
+  <li id="s94"><span class="no">[94]</span> Referencing permission sets in resource policies, EKS config maps, and KMS key policies — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/referencingpermissionsets.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/referencingpermissionsets.html</a></li>
+  <li id="s95"><span class="no">[95]</span> Creating OrganizationAccountAccessRole for an invited account — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_create-cross-account-role.html">https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_create-cross-account-role.html</a></li>
+  <li id="s96"><span class="no">[96]</span> StackSets AutoDeployment（RetainStacksOnAccountRemoval） — <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudformation-stackset-autodeployment.html">https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudformation-stackset-autodeployment.html</a></li>
+  <li id="s97"><span class="no">[97]</span> Import stacks into CloudFormation StackSets — <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-import.html">https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-import.html</a></li>
+  <li id="s98"><span class="no">[98]</span> Firewall Manager policy（ResourcesCleanUp） — <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-fms-policy.html">https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-fms-policy.html</a></li>
+  <li id="s99"><span class="no">[99]</span> AWS Config: Managing conformance packs across all accounts in your organization（Considerations） — <a href="https://docs.aws.amazon.com/config/latest/developerguide/conformance-pack-organization-apis.html">https://docs.aws.amazon.com/config/latest/developerguide/conformance-pack-organization-apis.html</a></li>
+  <li id="s100"><span class="no">[100]</span> GuardDuty: Disassociating (removing) member account from administrator account — <a href="https://docs.aws.amazon.com/guardduty/latest/ug/disassociate-remove-member-account-from-admin.html">https://docs.aws.amazon.com/guardduty/latest/ug/disassociate-remove-member-account-from-admin.html</a></li>
+  <li id="s101"><span class="no">[101]</span> AWS Organizations: IAM Identity Center and AWS Organizations — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/services-that-can-integrate-sso.html">https://docs.aws.amazon.com/organizations/latest/userguide/services-that-can-integrate-sso.html</a></li>
+  <li id="s102"><span class="no">[102]</span> GuardDuty API Reference: UpdateOrganizationConfiguration — <a href="https://docs.aws.amazon.com/guardduty/latest/APIReference/API_UpdateOrganizationConfiguration.html">https://docs.aws.amazon.com/guardduty/latest/APIReference/API_UpdateOrganizationConfiguration.html</a></li>
+  <li id="s103"><span class="no">[103]</span> GuardDuty: How Runtime Monitoring works with Fargate — <a href="https://docs.aws.amazon.com/guardduty/latest/ug/how-runtime-monitoring-works-ecs-fargate.html">https://docs.aws.amazon.com/guardduty/latest/ug/how-runtime-monitoring-works-ecs-fargate.html</a></li>
+  <li id="s104"><span class="no">[104]</span> AWS Config API Reference: PutOrganizationConfigRule（ExcludedAccounts） — <a href="https://docs.aws.amazon.com/config/latest/APIReference/API_PutOrganizationConfigRule.html">https://docs.aws.amazon.com/config/latest/APIReference/API_PutOrganizationConfigRule.html</a></li>
+  <li id="s105"><span class="no">[105]</span> AWS Config: Conformance packs（ルールと修復アクションの集合） — <a href="https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html">https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html</a></li>
+  <li id="s106"><span class="no">[106]</span> Configure patching for instances in an organization using a Quick Setup patch policy — <a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/quick-setup-patch-manager.html">https://docs.aws.amazon.com/systems-manager/latest/userguide/quick-setup-patch-manager.html</a></li>
+  <li id="s107"><span class="no">[107]</span> Control Tower enrollment prerequisites — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/enrollment-prerequisites.html">https://docs.aws.amazon.com/controltower/latest/userguide/enrollment-prerequisites.html</a></li>
+  <li id="s108"><span class="no">[108]</span> CloudFormation StackSets concepts（Permission models） — <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html">https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html</a></li>
+  <li id="s109"><span class="no">[109]</span> AWS CLI: cloudformation delete-stack-instances（--retain-stacks） — <a href="https://docs.aws.amazon.com/cli/latest/reference/cloudformation/delete-stack-instances.html">https://docs.aws.amazon.com/cli/latest/reference/cloudformation/delete-stack-instances.html</a></li>
+  <li id="s110"><span class="no">[110]</span> Delete your IAM Identity Center instance — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/delete-config.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/delete-config.html</a></li>
+  <li id="s111"><span class="no">[111]</span> Configuring IAM Identity Center authentication with the AWS CLI（vanity URL） — <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html">https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html</a></li>
+  <li id="s112"><span class="no">[112]</span> Configure SAML and SCIM with Microsoft Entra ID and IAM Identity Center — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/idp-microsoft-entra.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/idp-microsoft-entra.html</a></li>
+  <li id="s113"><span class="no">[113]</span> IAM Identity Center: Manage access to AWS accounts — <a href="https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-accounts.html">https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-accounts.html</a></li>
+  <li id="s114"><span class="no">[114]</span> CloudTrail: Creating a trail for an organization — <a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/creating-trail-organization.html">https://docs.aws.amazon.com/awscloudtrail/latest/userguide/creating-trail-organization.html</a></li>
+  <li id="s115"><span class="no">[115]</span> Billing and pricing for AWS Organizations — <a href="https://docs.aws.amazon.com/organizations/latest/userguide/pricing.html">https://docs.aws.amazon.com/organizations/latest/userguide/pricing.html</a></li>
+  <li id="s116"><span class="no">[116]</span> Control Tower pricing — <a href="https://docs.aws.amazon.com/controltower/latest/userguide/pricing.html">https://docs.aws.amazon.com/controltower/latest/userguide/pricing.html</a></li>
+  <li id="s117"><span class="no">[117]</span> AWS announces pricing for VPC Encryption Controls（2026-03） — <a href="https://aws.amazon.com/about-aws/whats-new/2026/03/vpc-encryption-controls-pricing/">https://aws.amazon.com/about-aws/whats-new/2026/03/vpc-encryption-controls-pricing/</a></li>
+  <li id="s118"><span class="no">[118]</span> Procedural OUs（Policy Staging） — <a href="https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/procedural-ous.html">https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/procedural-ous.html</a></li>
+</ul>
+<h3>AWS のブログと re:Post</h3>
+<ul class="src">
+  <li id="b1"><span class="no">[B1]</span> Temporary elevated access management with IAM Identity Center — <a href="https://aws.amazon.com/blogs/security/temporary-elevated-access-management-with-iam-identity-center/">https://aws.amazon.com/blogs/security/temporary-elevated-access-management-with-iam-identity-center/</a></li>
+  <li id="b2"><span class="no">[B2]</span> Migrating accounts between AWS Organizations from a network perspective（2022-07） — <a href="https://aws.amazon.com/blogs/networking-and-content-delivery/migrating-accounts-between-aws-organizations-from-a-network-perspective/">https://aws.amazon.com/blogs/networking-and-content-delivery/migrating-accounts-between-aws-organizations-from-a-network-perspective/</a></li>
+  <li id="b3"><span class="no">[B3]</span> Moving an organization member account to another organization: Part 3（信頼されたアクセスのサービス） — <a href="https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-3/">https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-3/</a></li>
+  <li id="b4"><span class="no">[B4]</span> How do I move an account to another organization?（re:Post） — <a href="https://repost.aws/knowledge-center/organizations-move-accounts">https://repost.aws/knowledge-center/organizations-move-accounts</a></li>
+  <li id="b5"><span class="no">[B5]</span> Moving an organization member account to another organization: Part 2（委任管理者） — <a href="https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-2/">https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-2/</a></li>
+  <li id="b6"><span class="no">[B6]</span> How a global payment processor preserved AWS RAM shares during an Organizations migration — <a href="https://aws.amazon.com/blogs/architecture/how-a-global-payment-processor-preserved-aws-ram-shares-and-lake-formation-permissions-during-an-aws-organizations-migration/">https://aws.amazon.com/blogs/architecture/how-a-global-payment-processor-preserved-aws-ram-shares-and-lake-formation-permissions-during-an-aws-organizations-migration/</a></li>
+  <li id="b7"><span class="no">[B7]</span> Transfer accounts while preserving Lake Formation permissions — <a href="https://aws.amazon.com/blogs/mt/transfer-aws-accounts-between-aws-organizations-while-preserving-aws-lake-formation-permissions/">https://aws.amazon.com/blogs/mt/transfer-aws-accounts-between-aws-organizations-while-preserving-aws-lake-formation-permissions/</a></li>
+  <li id="b8"><span class="no">[B8]</span> Moving an organization member account to another organization: Part 1 — <a href="https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-1/">https://aws.amazon.com/blogs/mt/aws-organizations-moving-an-organization-member-account-to-another-organization-part-1/</a></li>
+  <li id="b9"><span class="no">[B9]</span> How to use multiple instances of AWS IAM Identity Center — <a href="https://aws.amazon.com/blogs/security/how-to-use-multiple-instances-of-aws-iam-identity-center/">https://aws.amazon.com/blogs/security/how-to-use-multiple-instances-of-aws-iam-identity-center/</a></li>
+  <li id="b10"><span class="no">[B10]</span> How do I resolve login issues with Quick Suite?（re:Post） — <a href="https://repost.aws/knowledge-center/quicksight-resolve-login-issues">https://repost.aws/knowledge-center/quicksight-resolve-login-issues</a></li>
+</ul>
+
+<footer>
+図は AWS Architecture Icons（draw.io の AWS4 シェイプ）で作成した。図をクリックすると原寸で開く。編集用のファイルは <a href="diagrams/org-structure.drawio">org-structure.drawio</a> と <a href="diagrams/migration-bridge-share.drawio">migration-bridge-share.drawio</a>。
+</footer>
+</div>
+</body>
+</html>
